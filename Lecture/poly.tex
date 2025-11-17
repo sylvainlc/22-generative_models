@@ -1178,101 +1178,125 @@ X_t = \sqrt{1 - \beta_t } X_{t-1} + \sqrt{\beta_t} \xi_t\eqsp,
 \]
 where $(\xi_t)_{1\leqslant t \leqslant T}$ are i.i.d. standard Gaussian random vectors in $\mathbb{R}^d$ and $(\beta_t)_{1\leqslant t \leqslant T}$ is a small positive variance schedule, typically increasing over time. By choosing $\beta_t$ small, each step is only slightly destructive, but after a sufficient number of steps (e.g.\ $T = 1000$), the distribution approaches an isotropic Gaussian regardless of the initial data. Note that for all $1\leqslant t\leqslant T$, the marginal distribution $p_t$ of $X_t$ is unknown since
 $$
-p_t(x_t) = \int \pi_{{\rm data}}(\rmd x_0)q_{t|0}(x_0,x_t)\eqsp,
+p_t(x_t) = \int \pi_{{\rm data}}(\rmd x_0)q_{t|0}(x_t|x_0)\eqsp,
 $$
-where $q_{t|0}$ is the density function of the conditional distribution of $X_t$ given $X_0$. For all $x_0\in\mathbb{R}^d$, $q_{t|0}(x_0,\cdot)$ is the Gaussian probability density function with mean $\sqrt{\bar{\alpha}_t} x_0$ and variance $(1 - \bar{\alpha}_t) I_d$ with $\alpha_t = 1 - \beta_t$ and $\bar{\alpha}_t = \prod_{s=1}^t \alpha_s$. This allows sampling $x_t$ directly at any noise level without iterating the entire Markov chain.
+where $q_{t|0}$ is the density function of the conditional distribution of $X_t$ given $X_0$. For all $x_0\in\mathbb{R}^d$, $q_{t|0}(\cdot|x_0)$ is the Gaussian probability density function with mean $\sqrt{\bar{\alpha}_t} x_0$ and variance $(1 - \bar{\alpha}_t) I_d$ with $\alpha_t = 1 - \beta_t$ and $\bar{\alpha}_t = \prod_{s=1}^t \alpha_s$. This allows sampling $x_t$ directly at any noise level without iterating the entire Markov chain.
 
 \subsubsection*{Reverse Denoising Process}
 
 The generative process is a Markov chain parameterized by a neural network
 $p_\theta$ intended to reverse the diffusion. The joint probability density function of the generative process is given, for all $x_{0:T}\in(\rset^d)^{T+1}$, by
-\[
-p_\theta(x_{0:T}) = p_T(x_T)\prod_{t=1}^Tp_{\theta,T-t-1|T-t}(x_{T-t},x_{T-t-1})\eqsp,
-\]
-where $p_T$ is the standard Gaussian probability density function, $p_{\theta,T-t-1|T-t}(x_{T-t},\cdot)$ is a Gaussian probability density function with mean $\mu_\theta(x_{T-t}, T-t)$ and variance $\Sigma_\theta(x_{T-t}, T-t))$.  The functions $\mu_\theta$ and variance $\Sigma_\theta$ can be parameterized in various ways, we present in this section, the choices introduced in \cite{ho2020denoising}. The choice provided by $p_\theta$ means that to approximately sample $X_0$ from $\pi_{{\rm data}}$, we first sample $X_T\sim p_T$ and then iteratively sample from $p_{\theta,T-t-1|T-t}$ after training of $\mu_\theta$ and $\Sigma_\theta$.
+\begin{equation}
+\label{eq:backward:ddpm}
+p_\theta(x_{0:T}) = p_{\theta,T}(x_T)\prod_{t=1}^Tp_{\theta,T-t-1|T-t}(x_{T-t-1}|x_{T-t})\eqsp,
+\end{equation}
+where in general $p_{\theta,T}$ does not depend on $\theta$ and is the standard Gaussian probability density function, and where $p_{\theta,T-t-1|T-t}(\cdot|x_{T-t})$ is a Gaussian probability density function with mean $\mu_\theta(x_{T-t}, T-t)$ and variance $\Sigma_\theta(x_{T-t}, T-t)$.  The functions $\mu_\theta$ and variance $\Sigma_\theta$ can be parameterized in various ways, we present in this section, the choices introduced in \cite{ho2020denoising}. The choice \eqref{eq:backward:ddpm} means that to approximately sample $X_0$ from $\pi_{{\rm data}}$, we first sample $X_T\sim p_T$ and then iteratively sample from $p_{\theta,T-t-1|T-t}$ after training of $\mu_\theta$ and $\Sigma_\theta$.
 
 \subsubsection*{Variational loss function}
 The conditional distribution associated with the forward noising process can be written, 
 $$
-q(x_{1:T}|x_0) = q(x_T|x_0)\prod_{t=2}^Tq(x_{t-1}|x_0,x_t)\eqsp,
+q_{1:T|0}(x_{1:T}|x_0) = q_{T|0}(x_T|x_0)\prod_{t=2}^Tq_{t-1|0,t}(x_{t-1}|x_0,x_t)\eqsp,
 $$
-where $x_T\mapsto q(x_T|x_0)$ is the Gaussian probability density function with mean $\bar {\alpha}_T^{1/2}x_0$ and variance $(1-\bar \alpha_t)I_d$ and 
-$q(x_{t-1}|x_0,x_t) \propto q(x_{t-1}|x_0) q(x_{t}|x_{t-1})$ is the Gaussian probability density function with mean
+where $x_T\mapsto q_{T|0}(x_T|x_0)$ is the Gaussian probability density function with mean $\bar {\alpha}_T^{1/2}x_0$ and variance $(1-\bar \alpha_t)I_d$ and 
+$q_{t-1|0,t}(x_{t-1}|x_0,x_t) \propto q_{t-1|0}(x_{t-1}|x_0) q_{t|t-1}(x_{t}|x_{t-1})$ is the Gaussian probability density function with mean
 $$
-\mu(x_0,x_t) = \bar{\alpha}_t^{1/2}x_0 + \frac{(1 - \bar{\alpha}_{t-1}-\sigma_t^2)^{1/2}}{(1 - \bar{\alpha}_t)^{1/2}}\left(x_t- \bar{\alpha}_t^{1/2}x_0\right)
+\mu(x_0,x_t) = \frac{\beta_t\bar{\alpha}_{t-1}^{1/2}}{1-\bar{\alpha}_t}x_0 + \frac{1 - \bar{\alpha}_{t-1}}{1 - \bar{\alpha}_t}\sqrt{\alpha_t}x_t
 $$ 
 and variance denoted by $\sigma^2_{t}I_d$ where
 $$ 
 \sigma^2_{t} = \frac{1-\bar{\alpha}_{t-1}}{1-\bar{\alpha}_t} \beta_t\eqsp.
 $$
-Therefore, a natural parameterization of $\mu_\theta$ is 
+Therefore, a natural parameterization of $\mu_\theta$ would be
 $$
-\mu_\theta(x_{t}, t) = \bar {\alpha}_t^{1/2}x_0 + \frac{(1 - \bar{\alpha_{t-1}-\sigma_t^2})^{1/2}}{(1 - \bar{\alpha_t})^{1/2}}\left(x_t- \bar{\alpha_t}^{1/2}\widehat{x}_{\theta,0|t}\right)\eqsp,
+\mu_\theta(x_{t}, t) = \frac{\beta_t\bar{\alpha}_{t-1}^{1/2}}{1-\bar{\alpha}_t}\widehat{x}_{\theta,0|t} + \frac{1 - \bar{\alpha}_{t-1}}{1 - \bar{\alpha}_t}\sqrt{\alpha_t}x_t\eqsp,
 $$
-as where $\widehat{x}_{\theta,0|t}$ is parametric function (usually a deep neural network) used to predict the denoised data at time $t$. This neural network is then trained using a variational loss function by noting that:
+where $\widehat{x}_{\theta,0|t}$ is parametric function (usually a deep neural network) used to predict the denoised data at time $t$. In addition, we usually choose scalar variance matrices so that $\Sigma_\theta(x_{t}, t) = \sigma^2_{\theta}(x_t,t)I_d$.  
+The unknown parameters are then trained using a variational loss function by noting that:
 $$
-\log p_\theta(x_0) = \log \int \frac{p_\theta(x_{0:T})}{q(x_{1:T}|x_0)} q(x_{1:T}|x_0)\rmd x_{1:T} \geqslant \mathbb{E}_{q(\cdot|x_0)}\left[\log\frac{p_\theta(x_{0:T})}{q(x_{1:T}|x_0)}\right]\eqsp.
+\log p_\theta(x_0) = \log \int \frac{p_\theta(x_{0:T})}{q_{1:T|0}(x_{1:T}|x_0)} q_{1:T|0}(x_{1:T}|x_0)\rmd x_{1:T} \geqslant \mathbb{E}_{q_{1:T|0}(\cdot|x_0)}\left[\log\frac{p_\theta(x_{0:T})}{q_{1:T|0}(x_{1:T}|x_0)}\right]\eqsp.
 $$
-A natural loss function to be minimized is therefore:
+A loss function that can be minimized is therefore:
 $$
-\mathcal{L}(\theta,x_0) = -\mathbb{E}_{q(\cdot|x_0)}\left[\log\frac{p_\theta(x_{0:T})}{q(x_{1:T}|x_0)}\right]\eqsp.
+\mathcal{L}(\theta,x_0) = -\mathbb{E}_{q_{1:T|0}(\cdot|x_0)}\left[\log\frac{p_\theta(x_{0:T})}{q_{1:T|0}(x_{1:T}|x_0)}\right]\eqsp.
 $$
 This loss expands into a sum over time steps:
 \begin{align*}
-\mathcal{L}(\theta,x_0) &= \mathbb{E}_{q(\cdot|x_0)}\left[\log\frac{q(x_{1:T}|x_0)}{p_\theta(x_{0:T})}\right] \\
-&= \mathbb{E}_{q(\cdot|x_0)}\left[\log\frac{q(x_{T}|x_0)}{p_\theta(x_{T})}\right] + \sum_{t=2}^T\mathbb{E}_{q(\cdot|x_0)}\left[\log\frac{q(x_{t-1}|x_t,x_0)}{p_{\theta,t-1|t}(x_{t-1}|x_t)}\right] \\
-&\hspace{8cm} - \mathbb{E}_{q(\cdot|x_0)}\left[\log p_{\theta,t-1|t}(x_{0}|x_1)\right]\\
-&= \mathbb{E}_{q(\cdot|x_0)}\left[\mathrm{KL}\left(q(x_{T}|x_0)\middle\|p_\theta(x_{T})\right) + \sum_{t=2}^T\mathrm{KL}\left(q(x_{t-1}|x_t,x_0)\middle\|p_{\theta,t-1|t}(x_{t-1}|x_t)\right)\right] \\
-&\hspace{8cm} -\mathbb{E}_{q(\cdot|x_0)}\left[\log p_{\theta,t-1|t}(x_{0}|x_1)\right] \eqsp.
+\mathcal{L}(\theta,x_0) &= \mathbb{E}_{q_{1:T|0}(\cdot|x_0)}\left[\log\frac{q_{1:T|0}(x_{1:T}|x_0)}{p_\theta(x_{0:T})}\right] \\
+&= \mathbb{E}_{q_{1:T|0}(\cdot|x_0)}\left[\log\frac{q_{T|0}(x_{T}|x_0)}{p_\theta(x_{T})}\right] + \sum_{t=2}^T\mathbb{E}_{q_{1:T|0}(\cdot|x_0)}\left[\log\frac{q_{t-1|0,t}(x_{t-1}|x_0,x_t)}{p_{\theta,t-1|t}(x_{t-1}|x_t)}\right] \\
+&\hspace{8cm} - \mathbb{E}_{q_{1:T|0}(\cdot|x_0)}\left[\log p_{\theta,0|1}(x_{0}|x_1)\right]\\
+&= \mathbb{E}_{q_{1:T|0}(\cdot|x_0)}\left[\mathrm{KL}\left(q_{T|0}(\cdot|x_0)\middle\|p_{\theta,T}(x_{T})\right) + \sum_{t=2}^T\mathrm{KL}\left(q_{t-1|0,t}(\cdot|x_0,x_t)\middle\|p_{\theta,t-1|t}(\cdot|x_t)\right)\right] \\
+&\hspace{8cm} -\mathbb{E}_{q(\cdot|x_0)}\left[\log p_{\theta,0|1}(x_{0}|x_1)\right] \eqsp.
 \end{align*}
-In this decomposition, the first term ensures proper modeling of the Gaussian prior at step $T$, each term for $2\leqslant t \leqslant T$ measures how well the model's predicted reverse transition matches the true reverse transition and the last term measures the  reconstruction accuracy of $x_0$.
+In this decomposition, the first term ensures proper modeling of the Gaussian prior at step $T$, each term for $2\leqslant t \leqslant T$ measures how well the model's predicted reverse transition matches the true reverse transition and the last term measures the  reconstruction accuracy of $x_0$. By definition of the forward noising process and the generative model $p_\theta$, note that for all $2\leqslant t \leqslant T$,
+\begin{multline*}
+\mathrm{KL}\left(q_{t-1|0,t}(\cdot|x_0,x_t)\middle\|p_{\theta,t-1|t}(\cdot|x_t)\right) \\
+\hspace{-1cm}= \frac{1}{2}\left( \frac{\left\|\mu(x_0,x_t) - \mu_\theta(x_{t}, t)\right\|_2^2}{\sigma^{2}_{\theta}(x_t,t)} + d\frac{\sigma^{2}_{t}}{\sigma^{2}_{\theta}(x_t,t)} - d\log\frac{\sigma^{2}_{t}}{\sigma^{2}_{\theta}(x_t,t)} -d\right) \eqsp.
+\end{multline*}
+Following \cite{ho2020denoising}, if we choose to parameterize $\sigma^{2}_{\theta}(x_t,t)$ only using the forward noising process, e.g. choosing $\sigma^{2}_{\theta}(x_t,t) = \sigma^{2}_{t}$, yields
+$$
+\mathrm{KL}\left(q_{t-1|0,t}(\cdot|x_0,x_t)\middle\|p_{\theta,t-1|t}(\cdot|x_t)\right) =  \frac{\left\|\mu(x_0,x_t) - \mu_\theta(x_{t}, t)\right\|_2^2}{2\sigma^{2}_{t}}\eqsp,
+$$
+and each term of the loss function for $2\leqslant t\leqslant T$ amounts to an expected mean squared error. A crucial observation of \cite{ho2020denoising} is that this variational training objective is valid, but it is not the most effective training target. Instead, the authors replace most terms with a simplified objective that focuses on predicting noise. Note that using the forward process, if $X_{1:T}\sim q_{1:T|0}(\cdot|x_0)$,  in distribution,
+$$
+X_t = \sqrt{\bar{\alpha}_t}x_0 + \sqrt{1-\bar{\alpha}_t}\xi_t\eqsp,
+$$
+where $\xi_t$ is a standard Gaussian random vector. Plugging this expression in the definition of $\mu(x_0,x_t)$ allows to introduce
+\begin{align*}
+\mu(\xi_t,x_t) &= \frac{\beta_t\bar{\alpha}_{t-1}^{1/2}}{1-\bar{\alpha}_t}\bar{\alpha}^{-1/2}_t\left(x_t-\sqrt{1-\bar{\alpha}_t}\xi_t\right) + \frac{1 - \bar{\alpha}_{t-1}}{1 - \bar{\alpha}_t}\sqrt{\alpha_t}x_t\\
+&= \bar{\alpha}^{-1/2}_t\left(x_t - \left(1 - \bar{\alpha}_t\right)^{-1/2}\beta_t \xi_t\right)\eqsp.
+\end{align*}
+Then, \cite{ho2020denoising} proposed the following parameterization of the generative process: 
+$$
+\mu_\theta(x_{t}, t) = \bar{\alpha}^{-1/2}_t\left(x_t - \left(1 - \bar{\alpha}_t\right)^{-1/2}\beta_t \xi_\theta(t,x_t)\right)\eqsp,
+$$
+where $\xi_\theta(t,x_t)$ is parametric function which aims at estimating the noise between $x_0$ and $x_t$. Using this parameterization yields
+$$
+\mathrm{KL}\left(q_{t-1|0,t}(\cdot|x_0,x_t)\middle\|p_{\theta,t-1|t}(\cdot|x_t)\right) =  \frac{\beta_t^2}{2\sigma^{2}_{t}\left(1-\bar{\alpha}_t\right)}\left\|\xi_t -  \xi_\theta(t,x_t)\right\|_2^2\eqsp.
+$$
 
-Ho et al.\ make a crucial observation: although the VLB is valid, it is not
-the most effective training target. Instead, they replace most terms with
-a simplified objective that focuses on predicting noise:
-
-\[
-L_{\text{simple}} = \mathbb{E}_{t, x_0, \epsilon} 
-\left[ \lVert \epsilon - \epsilon_\theta(x_t, t) \rVert^2 \right].
-\]
-
-This loss is proportional to the VLB but is far easier to optimize and
-produces dramatically better visual quality.
-
-This simplified denoising objective is equivalent to weighted denoising score
-matching and connects DDPMs to score-based generative models.
+%
+%\[
+%L_{\text{simple}} = \mathbb{E}_{t, x_0, \epsilon} 
+%\left[ \lVert \epsilon - \epsilon_\theta(x_t, t) \rVert^2 \right].
+%\]
+%
+%This loss is proportional to the VLB but is far easier to optimize and
+%produces dramatically better visual quality.
+%
+%This simplified denoising objective is equivalent to weighted denoising score
+%matching and connects DDPMs to score-based generative models.
 
 
-\section{Sampling Procedure}
-
-Sampling from the learned model proceeds by iteratively denoising:
-
-\[
-x_{t-1} = \mu_\theta(x_t, t) + \sigma_t z, \quad z\sim \mathcal{N}(0, I).
-\]
-
-This process resembles multi-step image refinement. Importantly:
-\begin{itemize}
-    \item Sampling is slow: $T=1000$ steps is typical.
-    \item Quality is high because each step handles only a small amount of noise.
-\end{itemize}
-
-The authors show that careful variance schedules and prediction parameterization
-are essential to prevent artifacts.
-
-\section{Neural Architecture}
-
-The model uses a U-Net inspired architecture with:
-\begin{itemize}
-    \item residual blocks,
-    \item attention at multiple resolutions,
-    \item time-step embeddings (sinusoidal) injected at each block,
-    \item wide channel counts,
-    \item dropout for regularization.
-\end{itemize}
-
-This architecture is now standard in diffusion models and has proven to be
-scalable and robust.
+%\section{Sampling Procedure}
+%
+%Sampling from the learned model proceeds by iteratively denoising:
+%
+%\[
+%x_{t-1} = \mu_\theta(x_t, t) + \sigma_t z, \quad z\sim \mathcal{N}(0, I).
+%\]
+%
+%This process resembles multi-step image refinement. Importantly:
+%\begin{itemize}
+%    \item Sampling is slow: $T=1000$ steps is typical.
+%    \item Quality is high because each step handles only a small amount of noise.
+%\end{itemize}
+%
+%The authors show that careful variance schedules and prediction parameterization
+%are essential to prevent artifacts.
+%
+%\section{Neural Architecture}
+%
+%The model uses a U-Net inspired architecture with:
+%\begin{itemize}
+%    \item residual blocks,
+%    \item attention at multiple resolutions,
+%    \item time-step embeddings (sinusoidal) injected at each block,
+%    \item wide channel counts,
+%    \item dropout for regularization.
+%\end{itemize}
+%
+%This architecture is now standard in diffusion models and has proven to be
+%scalable and robust.
 
 
 
