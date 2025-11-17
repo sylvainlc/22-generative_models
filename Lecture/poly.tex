@@ -336,16 +336,16 @@ The following properties are used many times in these lecture notes.
 
 \chapter{Target distributions and examples}
 \minitoc
-In a general framework, generative modeling aims at designing algorithms to obtain samples from a complex distribution $\pi$ defined on a measurable space $(\mathsf{X},\mathcal{X})$. Such algorithms can be applied in many situations, we describe in this chapter some examples from various applications. The target distribution $\pi$ may have several forms depending on the different contexts. Very common situations in which sampling from a complex distribution $\pi$ include the following settings.
+In a general framework, generative modeling aims at designing algorithms to obtain samples from a complex distribution $\pi$ defined on a measurable space $(\mathsf{X},\mathcal{X})$. Such algorithms can be applied in many situations, we describe in this chapter some examples from various applications. They are central to modern computational statistics and machine learning, as they provide the foundation for inference and data synthesis in high-dimensional or structured domains. The target distribution $\pi$ may have several forms depending on the different contexts. Very common situations in which sampling from a complex distribution $\pi$ include the following settings.
 \begin{itemize}
 \item The distribution $\pi$ can be known up to a multiplicative constant (which is common in a Bayesian setting).  Obtaining samples from $\pi$ is far for straightforward in such cases, in particular in high dimensional problems.
 \item In other settings, we have access to a dataset $\mathcal{D} = \{X_1,\ldots,X_n\}$ of i.i.d. data with distribution $\pi$ and we introduce parametric models for the probability density associated with $\pi$, $\{p_\theta\}_{\theta\in\Theta}$, where $\Theta$ is a set of parameters. For all $\theta\in\Theta$, $p_\theta$ may depend on unobserved random variables and estimating $\theta$ using  $\mathcal{D}$ can be challenging (see for instance variational autoencoders). 
 \item Designing simple parametric models $\{p_\theta\}_{\theta\in\Theta}$ may be too restrictive for complex random variables (images, videos, etc.). In these settings, we propose generative models to sample approximately from $\pi$ without directly introducing such parametric models (see for instance score-based diffusion models).
 \end{itemize}
 
- For instance, in \cite{ng2001discriminative}, the authors discuss generative classifiers and propose to learn a model of a joint probability function of the inputs $X$ and the outputs $Y$ so that predictions can be made by using Bayes rule to compute the distribution of $Y$ given $X$. Without being restricted to classification problems, we focus in these notes on generative models where the data distribution depends on other variables or parameters, and we propose to model the joint distribution of all random variables. In such a setting, we may assume that the random variables $(X,Y)$ have an unknown distribution and we usually propose a parametric family of joint probability distributions $(x,y)\mapsto p_\theta(x,y)$, $\theta\in\Theta$, with respect to a dominating measure $\lambda$, in order to approximate this unknown distribution. 
+ %For instance, in \cite{ng2001discriminative}, the authors discuss generative classifiers and propose to learn a model of a joint probability function of the inputs $X$ and the outputs $Y$ so that predictions can be made by using Bayes rule to compute the distribution of $Y$ given $X$. Without being restricted to classification problems, we focus in these notes on generative models where the data distribution depends on other variables or parameters, and we propose to model the joint distribution of all random variables. In such a setting, we may assume that the random variables $(X,Y)$ have an unknown distribution and we usually propose a parametric family of joint probability distributions $(x,y)\mapsto p_\theta(x,y)$, $\theta\in\Theta$, with respect to a dominating measure $\lambda$, in order to approximate this unknown distribution. 
 
-In machine/statistical learning most of the problems we aim to solve require then to sample random variables from a complex distribution. Depending on the context, this distribution can be given for instance by a marginal density $p_\theta(y) = \int p_\theta(x,y) \lambda(\rmd x)$ or by a conditional/posterior distribution $p_\theta(x|y) = p_\theta(x)p_\theta(y|x)/\int p_\theta(x,y) \lambda(\rmd x)$.
+%In machine/statistical learning most of the problems we aim to solve require then to sample random variables from a complex distribution. Depending on the context, this distribution can be given for instance by a marginal density $p_\theta(y) = \int p_\theta(x,y) \lambda(\rmd x)$ or by a conditional/posterior distribution $p_\theta(x|y) = p_\theta(x)p_\theta(y|x)/\int p_\theta(x,y) \lambda(\rmd x)$.
 
 % In this course, we introduce different algorithms, depending on the framework, to solve machine learning tasks based on sampling random variables.  In particular, we detail Markov Chain Monte Carlo (MCMC) methods, which allow to construct a process $(X_k)_{k\in\nset}$ that targets an unknown distribution $\pi$. Sometimes $(X_k)_{k\in\nset}$ is itself a Markov chain with invariant probatility measure $\pi$, sometimes, $(X_k)_{k\in\nset}$ is the first component process of an extended Markov chain that targets an extended distribution where the marginal distribution on the first component is $\pi$.
 
@@ -360,36 +360,41 @@ data to obtain posterior distributions on which statistical inference is based.
 %Although we focus primarily on  likelihood based inference in this text,
 %it is also worthwhile to consider Bayesian  inference  for some problems.
 Except for some simple cases, Bayesian inference can be computationally
-intensive and may rely on  computational techniques.
+intensive and may rely on  computational techniques. The target distribution~$\pi$ is usually only known up to a multiplicative normalizing constant, i.e., for all $x\in \mathsf{X}$,
+\[
+\pi(x) = \frac{\tilde{\pi}(x)}{Z}, 
+\qquad Z = \int_{\mathsf{X}} \tilde{\pi}(x)\,\rmd x,
+\]
+where the normalizing constant~$Z$ is intractable. This situation arises, for example, when computing posterior distributions combining a likelihood function with a prior density. 
+Direct sampling from such targets is typically infeasible, especially in high-dimensional spaces or when the posterior has multiple modes. 
+This motivates the use of \emph{Markov chain Monte Carlo (MCMC)} techniques such as the Metropolis-Hastings algorithm or its gradient-based variants (e.g., Langevin and Hamiltonian Monte Carlo).  Important references include \cite{robert1999monte}, \cite{brooks2011handbook}, which provide theoretical and practical insights into the design and convergence of MCMC methods.
 
+\begin{example}
 The basic idea in Bayesian analysis is that a parameter vector $ \theta \in \Theta$ is unknown, so it is endowed with a \emph{prior} distribution
 $\theta\mapsto \pi_0( \theta)\lambda(\rmd \theta)$.  We also
-introduce a model or likelihood, $\dens[][]{ y_{1:n} \mid \theta}$, that is
-a conditional probability density function for the data $y_{1:n}$ which depends on the parameter vector.
+introduce a model or likelihood, $\dens[][]{ y \mid \theta}$, that is
+a conditional probability density function for the data $y$ which depends on the parameter vector.
 Inference about $ \theta$ is then based on the \emph{posterior}
 distribution, which is obtained via Bayes's theorem,
 \begin{equation} \label{eq:target:bayes}
-\theta \mapsto \pi(\theta) =\frac{\pi_0( \theta) \dens[][]{ y_{1:n} \mid \theta}}{\int \pi_0( \theta) \dens[][]{ y_{1:n} \mid \theta} \lambda(\rmd \theta)}.
+\theta \mapsto \pi(\theta) =\frac{\pi_0( \theta) \dens[][]{ y \mid \theta}}{\int \pi_0( \theta) \dens[][]{ y \mid \theta} \lambda(\rmd \theta)}.
 \end{equation}
   In some simple cases, the prior  and
 the likelihood are \emph{conjugate}  distributions that may be combined easily.
 For example, in $n$ fixed repeated (i.i.d.) Bernoulli experiments with probability of success $\theta\in(0,1)$,
-a \emph{Beta-Binomial} conjugate pair is taken.  In this case the prior is
-Beta($a,b$):
-$\pi_0(\theta) \propto \theta^{a} (1-\theta)^{b}$; the values $a,b > -1$  are called
+a \emph{Beta-Binomial} conjugate pair can be chosen.  In this case, the prior is
+Beta($a,b$) so that for all $\theta\in (0,1)$,  $\pi_0(\theta) \propto \theta^{a} (1-\theta)^{b}$. The values $a,b > -1$  are called
 hyperparameters. The likelihood in this example is
 Binomial$(n,\theta)$:
 $\dens[][]{ y \mid \theta} \propto \theta^y (1-\theta)^{n-y}$, from which
 we easily deduce that the
 posterior is also Beta,
 $\pi ( \theta ) \propto \theta^{y+a}(1-\theta)^{n+b-y }
-$, and from which inference may easily be achieved.
-
-In more complex experiments, the posterior distribution is often difficult to obtain by direct calculation,
+$, and from which inference may easily be achieved. In more complex experiments, the posterior distribution is often difficult to obtain by direct calculation,
 so alternatives have to be deployed to obtain samples approximately distributed as the posterior distribution. Note that in \eqref{eq:target:bayes}, the numerator is usually known and explicit while, due to the integral, the denominator is a multiplicative unknown constant.  
-
+\end{example}
 \begin{example}
-In Bayesian deep learning, uncertainty quantification may be obtained by analyzing the posterior distribution of the weights, as in \cite{blundell2015weight}. In this setting, using an input $x\in \rset^p$, the observations $Y$, conditionally on the parameter $\theta$, has a Gaussian distribution with mean $m_\theta(x)$ and covariance $\Sigma_\theta(x)$. The quantities  $m_\theta(x)$ and  $\Sigma_\theta(x)$ are outputs of a neural network (for instance a Multi-layer Perceptron) with input $x$ and parameters $\theta$. The prior distribution of $\theta$ is Gaussian with independent entries with mean $\mu \in\rset$ and varriance $\sigma^2>0$. Since $m_\theta(x)$ and  $\Sigma_\theta(x)$ contain many nonlinearities the posterior distribution $\pi$ of $\theta$, i.e. the distribution of $\theta$ given $Y$ and the input $x$, is unknown.
+In Bayesian deep learning, uncertainty quantification may be obtained by analyzing the posterior distribution of the weights, as in \cite{blundell2015weight}. In this setting, using an input $x\in \rset^p$, the observations $Y$, conditionally on the parameter $\theta$, has a Gaussian distribution with mean $m_\theta(x)$ and covariance $\Sigma_\theta(x)$. The quantities  $m_\theta(x)$ and  $\Sigma_\theta(x)$ are outputs of a neural network (for instance a Multi-layer Perceptron) with input $x$ and parameters $\theta$. The prior distribution of $\theta$ is Gaussian with independent entries with mean $\mu \in\rset$ and variance $\sigma^2>0$. Since $m_\theta(x)$ and  $\Sigma_\theta(x)$ contain many nonlinearities the posterior distribution $\pi$ of $\theta$, i.e. the distribution of $\theta$ given $Y$ and the input $x$, is unknown.
 \begin{figure}
 \centering
 \includegraphics[scale = .8]{bayesbybackprop.png}
@@ -405,6 +410,11 @@ In Bayesian deep learning, uncertainty quantification may be obtained by analyzi
 
 \subsection{Energy based models}
 \index{ebm}
+In another common setting, we have access to a dataset $\mathcal{D} = \{X_1, \dots, X_n\}$ consisting of i.i.d.\ samples from the unknown target distribution~$\pi$. 
+The goal is then to approximate~$\pi$ using a \emph{parametric family of probability densities} $\{p_\theta\}_{\theta \in \Theta}$, where $\Theta \subset \mathbb{R}^d$ denotes a parameter space. 
+
+%Estimating the parameters~$\theta$ therefore requires approximate inference techniques such as \emph{variational inference} or \emph{Expectation--Maximization (EM)}. 
+%A prominent example of this framework is the \emph{Variational Autoencoder (VAE)} introduced by \citet{KingmaWelling2014}, which combines amortized inference with deep neural network parameterizations to model high-dimensional complex data.
 Energy-based models (EBM) are very flexible models which describe the target distribution using an unnormalized function, referred to as the energy function. These models are easier to design that models with a tractable likelihood such as autoregressive models, in particular in high-dimensional setting. As the energy function is not normalized, it can
 be easily parameterized with any nonlinear regression function. Using neural networks such as Multi-layer Perceptrons, or convolutional neural networks, is it straightforward to introduce energy function with specific structures depending nonlinearly on the input. We can choose specific
 architectures tailored for every type of data, see \cite{song2021train} for a recent overview of EBM.
@@ -418,7 +428,7 @@ $$
 Z_\theta = \int \exp\left(-\mathrm{E}_\theta(u)\right)\rmd u.
 $$
 Since $Z_\theta$ is an intractable integral, evaluation and
-differentiation of $x\mapsto \log \pi_\theta(x)$ is not possible in usual settings. In order to estimate the unknwon parameter $\theta$ using i.i.d. data an appealing approach is to use gradient-based maximization procedureof the likelihood function. This means that we need to compute:
+differentiation of $x\mapsto \log \pi_\theta(x)$ is not possible in usual settings. In order to estimate the unknwon parameter $\theta$ using i.i.d. data an appealing approach is to use gradient-based maximization procedure of the likelihood function. This means that we need to compute:
 $$
 x\mapsto \nabla_\theta \log\pi_\theta(x) = -\nabla_\theta\mathrm{E}_\theta(x) - \nabla_\theta \log Z_\theta.
 $$
@@ -426,7 +436,10 @@ The first term can be evaluated easily as $\mathrm{E}_\theta(x)$ is known. For t
 \begin{multline*}
 \nabla_\theta \log Z_\theta = Z_\theta^{-1} \int \nabla_\theta\exp\left(-\mathrm{E}_\theta(u)\right)\rmd u \\=  \int \left\{-\nabla_\theta \mathrm{E}_\theta(u)\right\}Z_\theta^{-1}\exp\left(-\mathrm{E}_\theta(u)\right)\rmd u = \int \left\{-\nabla_\theta \mathrm{E}_\theta(u)\right\}\pi_\theta(u)\rmd u .
 \end{multline*}
-Therefore $\nabla_\theta \log Z_\theta = \mathbb{E}_{\pi_\theta}[-\nabla_\theta \mathrm{E}_\theta(X)]$ where $\mathbb{E}_{\mu}[f(X)]$ denotes the expectation of $f(X)$ when $X\sim \mu$. Therefore, it is possible to train an EBM by providing a Monte Carlo estimate of $\nabla_\theta \log Z_\theta$ which requires to obtain samples from $\pi_\theta$. However, this is not straightforward as $\pi_\theta$ is known only up to a multiplicative normalizing constant (as in the Bayesian setting).
+Therefore $\nabla_\theta \log Z_\theta = \mathbb{E}_{\pi_\theta}[-\nabla_\theta \mathrm{E}_\theta(X)]$ where $\mathbb{E}_{\mu}[f(X)]$ denotes the expectation of $f(X)$ when $X\sim \mu$. Therefore, it is possible to train an EBM by providing a Monte Carlo estimate of $\nabla_\theta \log Z_\theta$ which requires to obtain samples from $\pi_\theta$. However, this is not straightforward as $\pi_\theta$ is known only up to a multiplicative normalizing constant (as in the Bayesian setting). Consequently, both estimation and simulation are difficult, especially in high-dimensional settings, requiring sophisticated MCMC methods such as Langevin or Hamiltonian dynamics \cite{du2019implicit}. Practical deployment hinges on efficient estimation techniques (e.g., score matching, contrastive divergence, denoising-based methods) and effective simulation methods capable of exploring high-dimensional energy landscapes. Recent work has introduced hybrid strategies combining implicit generators with energy refinement to alleviate sampling difficulties and improve generative performance \cite{arbel2020generalized}.
+
+EBMs are particularly appealing in applications such as computer vision, physics-inspired modeling, and Bayesian inference.  The main motivations for using EBMs include: (i) their ability to handle unnormalized densities, which naturally appear in Bayesian posterior distributions and undirected graphical models; (ii) the flexibility to parameterize expressive energy functions via deep neural networks; and (iii) the compositionality of energy functions.  
+
 
 %
 %\subsection{Variational auto-encoders}
@@ -1033,9 +1046,10 @@ with $\mathbb{E}_{\pi_{\mathrm{data}}}[b(X)]\leqslant a_1$.
 \begin{theorem}
 \label{th:vae:excess:risk}
 Assume that H\ref{assum:vae:orlicz}-\ref{assum:vae:lip} hold. Then, there exist $c_0,c_1,c_2,d>0$ such that with probability at least $1- c_0 \mathrm{exp}\{-c_1(d\log n)^{1\wedge \alpha}\}$,
-$$
-\mathbb{E}_{\pi_{\mathrm{data}}}\left[m(\widehat \theta_n,\widehat\varphi_n,X)\right]\leqslant \underset{\gamma>0}{\mathrm{inf}}\left\{(1+\gamma) \underset{\theta\in\Theta,\varphi\in\Phi}{\mathrm{min}}\mathbb{E}_{\pi_{\mathrm{data}}}[m(\theta,\varphi,X)] + c_2(1+\gamma^{-1})\frac{dD}{n}\log(nd)\log^{1/\alpha}n\right\}\eqsp.
-$$
+\begin{multline*}
+\mathbb{E}_{\pi_{\mathrm{data}}}\left[m(\widehat \theta_n,\widehat\varphi_n,X)\right]\\
+\leqslant \underset{\gamma>0}{\mathrm{inf}}\left\{(1+\gamma) \underset{\theta\in\Theta,\varphi\in\Phi}{\mathrm{min}}\mathbb{E}_{\pi_{\mathrm{data}}}[m(\theta,\varphi,X)] + c_2(1+\gamma^{-1})\frac{dD}{n}\log(nd)\log^{1/\alpha}n\right\}\eqsp.
+\end{multline*}
 \end{theorem}
 The oracle inequality given in Theorem~\ref{th:vae:excess:risk} can be used to control the total variation distance between the target distribution and the generative model  using a Variational Mixture of Posteriors prior.
 \begin{proposition}
@@ -1144,7 +1158,128 @@ where $X_0^{(L)}$ is sampled from an arbitrary distribution, $X^{(i)}_{0}=X^{(i+
 
 Although adding noise to learn perturbed score functions and annealed Langevin dynamics are appealing to sample approximately from $\pi_{\mathrm{data}}$, this approach is computationally intensive and depends on many sensitive hyperparameters: choice of $L$ and standard deviations $0<\sigma_1 < \ldots <\sigma_L$, length of the Langevin dynamics $n$.  Score-based generative models based on diffusion propose to introduce a continuous-time noising dynamics to efficiently learn the generative process without having to choose predefined noise levels.
 
-\section{Score-based generative models}
+\section{Score-based generative models: discrete time approach}
+
+Denoising Diffusion Probabilistic Models (DDPMs) were introduced in \cite{ho2020denoising}, they gradually destroy structure in data using a
+forward noising process and then learn to invert that process. This approach aims at improving state-of-the-art generative models, in particular the tricky stability of GANs training and the lack of expressiveness of VAEs. The key idea of DDPMs can be summarized as follows.
+\begin{itemize}
+    \item Define a fixed noising process that gradually transforms data into
+    random variables with distribution close to an isotropic Gaussian over $T$ time steps.
+    \item Learn a  Markovian reverse denoising process that reconstructs the data distribution
+    step-by-step, initialized with a standard Gaussian random vector.
+\end{itemize}
+
+\subsubsection*{Forward Diffusion Process}
+
+The forward diffusion process is a Markov chain that progressively
+adds small amounts of Gaussian noise. Let $X_0 \sim \pi_{{\rm data}}$, and for all $1\leqslant t \leqslant T$, write 
+\[
+X_t = \sqrt{1 - \beta_t } X_{t-1} + \sqrt{\beta_t} \xi_t\eqsp,
+\]
+where $(\xi_t)_{1\leqslant t \leqslant T}$ are i.i.d. standard Gaussian random vectors in $\mathbb{R}^d$ and $(\beta_t)_{1\leqslant t \leqslant T}$ is a small positive variance schedule, typically increasing over time. By choosing $\beta_t$ small, each step is only slightly destructive, but after a sufficient number of steps (e.g.\ $T = 1000$), the distribution approaches an isotropic Gaussian regardless of the initial data. Note that for all $1\leqslant t\leqslant T$, the marginal distribution $p_t$ of $X_t$ is unknown since
+$$
+p_t(x_t) = \int \pi_{{\rm data}}(\rmd x_0)q_{t|0}(x_0,x_t)\eqsp,
+$$
+where $q_{t|0}$ is the density function of the conditional distribution of $X_t$ given $X_0$. For all $x_0\in\mathbb{R}^d$, $q_{t|0}(x_0,\cdot)$ is the Gaussian probability density function with mean $\sqrt{\bar{\alpha}_t} x_0$ and variance $(1 - \bar{\alpha}_t) I_d$ with $\alpha_t = 1 - \beta_t$ and $\bar{\alpha}_t = \prod_{s=1}^t \alpha_s$. This allows sampling $x_t$ directly at any noise level without iterating the entire Markov chain.
+
+\subsubsection*{Reverse Denoising Process}
+
+The generative process is a Markov chain parameterized by a neural network
+$p_\theta$ intended to reverse the diffusion. The joint probability density function of the generative process is given, for all $x_{0:T}\in(\rset^d)^{T+1}$, by
+\[
+p_\theta(x_{0:T}) = p_T(x_T)\prod_{t=1}^Tp_{\theta,T-t-1|T-t}(x_{T-t},x_{T-t-1})\eqsp,
+\]
+where $p_T$ is the standard Gaussian probability density function, $p_{\theta,T-t-1|T-t}(x_{T-t},\cdot)$ is a Gaussian probability density function with mean $\mu_\theta(x_{T-t}, T-t)$ and variance $\Sigma_\theta(x_{T-t}, T-t))$.  The functions $\mu_\theta$ and variance $\Sigma_\theta$ can be parameterized in various ways, we present in this section, the choices introduced in \cite{ho2020denoising}. The choice provided by $p_\theta$ means that to approximately sample $X_0$ from $\pi_{{\rm data}}$, we first sample $X_T\sim p_T$ and then iteratively sample from $p_{\theta,T-t-1|T-t}$ after training of $\mu_\theta$ and $\Sigma_\theta$.
+
+\subsubsection*{Variational loss function}
+The conditional distribution associated with the forward noising process can be written, 
+$$
+q(x_{1:T}|x_0) = q(x_T|x_0)\prod_{t=2}^Tq(x_{t-1}|x_0,x_t)\eqsp,
+$$
+where $x_T\mapsto q(x_T|x_0)$ is the Gaussian probability density function with mean $\bar {\alpha}_T^{1/2}x_0$ and variance $(1-\bar \alpha_t)I_d$ and 
+$q(x_{t-1}|x_0,x_t) \propto q(x_{t-1}|x_0) q(x_{t}|x_{t-1})$ is the Gaussian probability density function with mean
+$$
+\mu(x_0,x_t) = \bar{\alpha}_t^{1/2}x_0 + \frac{(1 - \bar{\alpha}_{t-1}-\sigma_t^2)^{1/2}}{(1 - \bar{\alpha}_t)^{1/2}}\left(x_t- \bar{\alpha}_t^{1/2}x_0\right)
+$$ 
+and variance denoted by $\sigma^2_{t}I_d$ where
+$$ 
+\sigma^2_{t} = \frac{1-\bar{\alpha}_{t-1}}{1-\bar{\alpha}_t} \beta_t\eqsp.
+$$
+Therefore, a natural parameterization of $\mu_\theta$ is 
+$$
+\mu_\theta(x_{t}, t) = \bar {\alpha}_t^{1/2}x_0 + \frac{(1 - \bar{\alpha_{t-1}-\sigma_t^2})^{1/2}}{(1 - \bar{\alpha_t})^{1/2}}\left(x_t- \bar{\alpha_t}^{1/2}\widehat{x}_{\theta,0|t}\right)\eqsp,
+$$
+as where $\widehat{x}_{\theta,0|t}$ is parametric function (usually a deep neural network) used to predict the denoised data at time $t$. This neural network is then trained using a variational loss function by noting that:
+$$
+\log p_\theta(x_0) = \log \int \frac{p_\theta(x_{0:T})}{q(x_{1:T}|x_0)} q(x_{1:T}|x_0)\rmd x_{1:T} \geqslant \mathbb{E}_{q(\cdot|x_0)}\left[\log\frac{p_\theta(x_{0:T})}{q(x_{1:T}|x_0)}\right]\eqsp.
+$$
+A natural loss function to be minimized is therefore:
+$$
+\mathcal{L}(\theta,x_0) = -\mathbb{E}_{q(\cdot|x_0)}\left[\log\frac{p_\theta(x_{0:T})}{q(x_{1:T}|x_0)}\right]\eqsp.
+$$
+This loss expands into a sum over time steps:
+\begin{align*}
+\mathcal{L}(\theta,x_0) &= \mathbb{E}_{q(\cdot|x_0)}\left[\log\frac{q(x_{1:T}|x_0)}{p_\theta(x_{0:T})}\right] \\
+&= \mathbb{E}_{q(\cdot|x_0)}\left[\log\frac{q(x_{T}|x_0)}{p_\theta(x_{T})}\right] + \sum_{t=2}^T\mathbb{E}_{q(\cdot|x_0)}\left[\log\frac{q(x_{t-1}|x_t,x_0)}{p_{\theta,t-1|t}(x_{t-1}|x_t)}\right] \\
+&\hspace{8cm} - \mathbb{E}_{q(\cdot|x_0)}\left[\log p_{\theta,t-1|t}(x_{0}|x_1)\right]\\
+&= \mathbb{E}_{q(\cdot|x_0)}\left[\mathrm{KL}\left(q(x_{T}|x_0)\middle\|p_\theta(x_{T})\right) + \sum_{t=2}^T\mathrm{KL}\left(q(x_{t-1}|x_t,x_0)\middle\|p_{\theta,t-1|t}(x_{t-1}|x_t)\right)\right] \\
+&\hspace{8cm} -\mathbb{E}_{q(\cdot|x_0)}\left[\log p_{\theta,t-1|t}(x_{0}|x_1)\right] \eqsp.
+\end{align*}
+In this decomposition, the first term ensures proper modeling of the Gaussian prior at step $T$, each term for $2\leqslant t \leqslant T$ measures how well the model's predicted reverse transition matches the true reverse transition and the last term measures the  reconstruction accuracy of $x_0$.
+
+Ho et al.\ make a crucial observation: although the VLB is valid, it is not
+the most effective training target. Instead, they replace most terms with
+a simplified objective that focuses on predicting noise:
+
+\[
+L_{\text{simple}} = \mathbb{E}_{t, x_0, \epsilon} 
+\left[ \lVert \epsilon - \epsilon_\theta(x_t, t) \rVert^2 \right].
+\]
+
+This loss is proportional to the VLB but is far easier to optimize and
+produces dramatically better visual quality.
+
+This simplified denoising objective is equivalent to weighted denoising score
+matching and connects DDPMs to score-based generative models.
+
+
+\section{Sampling Procedure}
+
+Sampling from the learned model proceeds by iteratively denoising:
+
+\[
+x_{t-1} = \mu_\theta(x_t, t) + \sigma_t z, \quad z\sim \mathcal{N}(0, I).
+\]
+
+This process resembles multi-step image refinement. Importantly:
+\begin{itemize}
+    \item Sampling is slow: $T=1000$ steps is typical.
+    \item Quality is high because each step handles only a small amount of noise.
+\end{itemize}
+
+The authors show that careful variance schedules and prediction parameterization
+are essential to prevent artifacts.
+
+\section{Neural Architecture}
+
+The model uses a U-Net inspired architecture with:
+\begin{itemize}
+    \item residual blocks,
+    \item attention at multiple resolutions,
+    \item time-step embeddings (sinusoidal) injected at each block,
+    \item wide channel counts,
+    \item dropout for regularization.
+\end{itemize}
+
+This architecture is now standard in diffusion models and has proven to be
+scalable and robust.
+
+
+
+
+
+
+\section{Score-based generative models: continuous time approach}
 
 Score-based Generative Models (SGMs) are probabilistic models designed to address this challenge using two main phases. The first phase, also referred to as the forward phase, involves progressively perturbing the empirical distribution by adding noise to the training data until its distribution approximately reaches an {easy-to-sample} distribution $\pi_{\infty}$. The second phase involves learning to reverse this noising dynamics by sequentially removing the noise, which is referred to as the sampling phase or backward phase. 
 Reversing the dynamics during the backward phase would require in principle knowledge of the score function, i.e., the gradient of the logarithm of the density at each time step of the diffusion. 
@@ -1377,16 +1512,14 @@ $\PP$-a.s.
 Note that in the definition we consider $\PP(X_{k+1}\in A|X_{0:k})$,
 that is, the conditional probability is with respect to the sigma-field
 $\sigma(X_{0:k})$. We can actually replace $\sigma(X_{0:k})$ by
-$\mcf_{k}$ as soon as we know that $(X_{k})_{k\geq0}$ is $(\mcf_{k})_{k\geq0}$-adapted.
-
-If $\seq{\mcf_{k}}{k\in\nset}$
+$\mcf_{k}$ as soon as we know that $(X_{k})_{k\geq0}$ is $(\mcf_{k})_{k\geq0}$-adapted. If $\seq{\mcf_{k}}{k\in\nset}$
 is a sequence of embedded sigma-fields on $\Xset$ (that is, $\mcf_{k}\subset\mcf_{k+1}$
 for all $k\in\nset$), then $\seq{\mcf_{k}}{k\in\nset}$ is called a filtration \index{filtration}
 on $\Xset$ and we say that $(X_{k})_{k\geq0}$ is $(\mcf_{k})_{k\geq0}$-adapted
 if $X_{k}$ is $\mcg/\mcf_{k}$-measurable for all $k\in\nset$. Of
 course, the most natural filtration for $\seq{X_{k}}{k\in\nset}$
 is indeed $\mcf_{k}=\sigma(X_{0:k})$ and unsurprisingly, we call
-it the natural filtration \index{filtration!natural}. But other possibilities exist,
+it the natural filtration\index{filtration!natural}. But other possibilities exist,
 where $\mcf_{k}$ is enlarged to include some other variables alongside
 with $X_{0:k}$. For example, let $\seq{Y_{k}}{k\in\nset}$ be any
 other sequence of random variables on $(\Omega,\mcg,\PP)$ and taking
@@ -1699,7 +1832,7 @@ surprisingly, it is not needed in this course.  Exercise~\ref{exo:strongMarkov} 
 %
 %\end{subappendices}
 
-\chapter{Metroppolis-Hastings algorithms}
+\chapter{Metropolis-Hastings algorithms}
 \minitoc
 %\begin{keywords}
 %Invariant probability measures, existence, uniqueness, reversibility.
