@@ -191,7 +191,7 @@
 \newcommand{\gauss}{\mathcal{N}}
 \newcommand{\eqsp}{}
 \newcommand{\diag}{\mathrm{diag}}
-
+\newcommand{\kl}{\mathrm{KL}}
 
 \makeatother
 
@@ -414,7 +414,7 @@ In another common setting, we have access to a dataset $\mathcal{D} = \{X_1, \do
 The goal is then to approximate~$\pi$ using a \emph{parametric family of probability densities} $\{p_\theta\}_{\theta \in \Theta}$, where $\Theta \subset \mathbb{R}^d$ denotes a parameter space. 
 
 %Estimating the parameters~$\theta$ therefore requires approximate inference techniques such as \emph{variational inference} or \emph{Expectation--Maximization (EM)}. 
-%A prominent example of this framework is the \emph{Variational Autoencoder (VAE)} introduced by \citet{KingmaWelling2014}, which combines amortized inference with deep neural network parameterizations to model high-dimensional complex data.
+%A prominent example of this framework is the \emph{Variational Autoencoder (VAE)} introduced by \cite{KingmaWelling2014}, which combines amortized inference with deep neural network parameterizations to model high-dimensional complex data.
 Energy-based models (EBM) are very flexible models which describe the target distribution using an unnormalized function, referred to as the energy function. These models are easier to design that models with a tractable likelihood such as autoregressive models, in particular in high-dimensional setting. As the energy function is not normalized, it can
 be easily parameterized with any nonlinear regression function. Using neural networks such as Multi-layer Perceptrons, or convolutional neural networks, is it straightforward to introduce energy function with specific structures depending nonlinearly on the input. We can choose specific
 architectures tailored for every type of data, see \cite{song2021train} for a recent overview of EBM.
@@ -1176,7 +1176,7 @@ adds small amounts of Gaussian noise. Let $X_0 \sim \pi_{{\rm data}}$, and for a
 \[
 X_t = \sqrt{1 - \beta_t } X_{t-1} + \sqrt{\beta_t} \xi_t\eqsp,
 \]
-where $(\xi_t)_{1\leqslant t \leqslant T}$ are i.i.d. standard Gaussian random vectors in $\mathbb{R}^d$ and $(\beta_t)_{1\leqslant t \leqslant T}$ is a small positive variance schedule, typically increasing over time. By choosing $\beta_t$ small, each step is only slightly destructive, but after a sufficient number of steps (e.g.\ $T = 1000$), the distribution approaches an isotropic Gaussian regardless of the initial data. Note that for all $1\leqslant t\leqslant T$, the marginal distribution $p_t$ of $X_t$ is unknown since
+where $(\xi_t)_{1\leqslant t \leqslant T}$ are i.i.d. standard Gaussian random vectors in $\mathbb{R}^d$ and $(\beta_t)_{1\leqslant t \leqslant T}$ is a positive variance schedule, typically increasing over time. By choosing $\beta_t$ small, each step is only slightly destructive, but after a sufficient number of steps (e.g.\ $T = 1000$), the distribution approaches an isotropic Gaussian regardless of the initial data. Note that for all $1\leqslant t\leqslant T$, the marginal distribution $p_t$ of $X_t$ is unknown since
 $$
 p_t(x_t) = \int \pi_{{\rm data}}(\rmd x_0)q_{t|0}(x_t|x_0)\eqsp,
 $$
@@ -1249,63 +1249,17 @@ Then, \cite{ho2020denoising} proposed the following parameterization of the gene
 $$
 \mu_\theta(x_{t}, t) = \bar{\alpha}^{-1/2}_t\left(x_t - \left(1 - \bar{\alpha}_t\right)^{-1/2}\beta_t \xi_\theta(t,x_t)\right)\eqsp,
 $$
-where $\xi_\theta(t,x_t)$ is parametric function which aims at estimating the noise between $x_0$ and $x_t$. Using this parameterization yields
+where $\xi_\theta(t,x_t)$ is parametric function which aims at estimating the noise between $x_0$ and $x_t$. Using this parameterization, for all $2\leqslant t \leqslant T$,
 $$
-\mathrm{KL}\left(q_{t-1|0,t}(\cdot|x_0,x_t)\middle\|p_{\theta,t-1|t}(\cdot|x_t)\right) =  \frac{\beta_t^2}{2\sigma^{2}_{t}\left(1-\bar{\alpha}_t\right)}\left\|\xi_t -  \xi_\theta(t,x_t)\right\|_2^2\eqsp.
+\mathbb{E}_{q_{1:T|0}(\cdot|x_0)}\left[\mathrm{KL}\left(q_{t-1|0,t}(\cdot|x_0,x_t)\middle\|p_{\theta,t-1|t}(\cdot|x_t)\right)\right] =  \frac{\beta_t^2}{2\sigma^{2}_{t}\left(1-\bar{\alpha}_t\right)\alpha_t}\mathbb{E}\left[\left\|\xi -  \xi_\theta(t,x_t)\right\|_2^2\right]\eqsp,
 $$
-
-%
-%\[
-%L_{\text{simple}} = \mathbb{E}_{t, x_0, \epsilon} 
-%\left[ \lVert \epsilon - \epsilon_\theta(x_t, t) \rVert^2 \right].
-%\]
-%
-%This loss is proportional to the VLB but is far easier to optimize and
-%produces dramatically better visual quality.
-%
-%This simplified denoising objective is equivalent to weighted denoising score
-%matching and connects DDPMs to score-based generative models.
-
-
-%\section{Sampling Procedure}
-%
-%Sampling from the learned model proceeds by iteratively denoising:
-%
-%\[
-%x_{t-1} = \mu_\theta(x_t, t) + \sigma_t z, \quad z\sim \mathcal{N}(0, I).
-%\]
-%
-%This process resembles multi-step image refinement. Importantly:
-%\begin{itemize}
-%    \item Sampling is slow: $T=1000$ steps is typical.
-%    \item Quality is high because each step handles only a small amount of noise.
-%\end{itemize}
-%
-%The authors show that careful variance schedules and prediction parameterization
-%are essential to prevent artifacts.
-%
-%\section{Neural Architecture}
-%
-%The model uses a U-Net inspired architecture with:
-%\begin{itemize}
-%    \item residual blocks,
-%    \item attention at multiple resolutions,
-%    \item time-step embeddings (sinusoidal) injected at each block,
-%    \item wide channel counts,
-%    \item dropout for regularization.
-%\end{itemize}
-%
-%This architecture is now standard in diffusion models and has proven to be
-%scalable and robust.
-
-
-
+where $\xi\sim \mathcal{N}(0,I_d)$ and $x_t\sim p_t$ are independent.
 
 
 
 \section{Score-based generative models: continuous time approach}
 
-Score-based Generative Models (SGMs) are probabilistic models designed to address this challenge using two main phases. The first phase, also referred to as the forward phase, involves progressively perturbing the empirical distribution by adding noise to the training data until its distribution approximately reaches an {easy-to-sample} distribution $\pi_{\infty}$. The second phase involves learning to reverse this noising dynamics by sequentially removing the noise, which is referred to as the sampling phase or backward phase. 
+Score-based Generative Models (SGMs) can also be described using continuous-time probabilistic models designed in two main phases. The first phase, also referred to as the forward phase, involves progressively perturbing the empirical distribution by adding noise to the training data until its distribution approximately reaches an {easy-to-sample} distribution $\pi_{\infty}$. The second phase involves learning to reverse this noising dynamics by sequentially removing the noise, which is referred to as the sampling phase or backward phase. 
 Reversing the dynamics during the backward phase would require in principle knowledge of the score function, i.e., the gradient of the logarithm of the density at each time step of the diffusion. 
 To circumvent this issue, the score function is learned by training  a deep neural network. When applying these learned reverse dynamics to samples from  $\pi_\infty$, we obtain a generative distribution that approximates  $\pi_{\rm data}$. 
 
@@ -1444,32 +1398,561 @@ $$
 where $\{Z_k\}_{1\leq k \leq N}$ are i.i.d. with standard Gaussian distribution and independent of $\overleftarrow{X}^{\param}_0$. Deonte by $\pihat$ the distribution of $\overleftarrow{X}^{\param}_{t_N}$, i.e. the distribution of the random variable obtained after $N$ steps of the discretized backward process. After training of $\param$, this distribution is the generative model which aims at sampling approximately from $\pi_{\mathrm{data}}$.
 
 \section{Some theoretical guarantees}
-Many theoretical results have been proposed in the literature to control a distance or pseudo-distance between $\pihat$ and $\pi_{\mathrm{data}}$. Most results focus on controls for the Kullback-Leibler divergence, the total variation and 2-Wasserstein distances, see for instance \cite{debortoli2021, conforti2023, chen2023sampling}. Consider the following additional notations. The modified marginal distribution is the marginal distribution of the forward process divided by the density of its stationary distribution defined, for all $x\in\mathbb{R}^d$ and all $0\leqslant t \leqslant T$, by
+Many theoretical results have been proposed in the literature to control a distance or pseudo-distance between $\pihat$ and $\pi_{\mathrm{data}}$. Most results focus on controls for the Kullback-Leibler divergence, the total variation and 2-Wasserstein distances, see for instance \cite{debortoli2021, conforti2023, chen2023sampling}. In these notes, we follow the proofs of \cite{strasman2024analysis}. Consider the following additional notations. The modified marginal distribution is the marginal distribution of the forward process divided by the density of its stationary distribution defined, for all $x\in\mathbb{R}^d$ and all $0\leqslant t \leqslant T$, by
 $$
 \tilde p_{t}(x) \eqdef {p_t(x)} / {\gausspdf_{\sigma^2}(x)}\eqsp, 
 $$
 and $ \tilde s_{\theta} (t, x) = s_{\theta}(t, x) + x/\sigma^2$ where $\gausspdf_{\sigma^2}$ denote the density function of $\pi_\infty$, a Gaussian distribution with mean $0$ and variance $\sigma^2 \mathrm{I}_d$. The modified score function is $\nabla \log \tilde p_t(x)= \nabla \log p_t(x) + x/\sigma^2$.
 
+The data distribution $\pi_{\rm data}$ is assumed to be absolutely continuous with respect to the Gaussian measure $\pi_{\infty}$. Define the relative Fisher information $\mathcal{I}(\pi_{\rm data} | \pi_{\infty})$ by 
+\begin{align*}
+\mathcal{I}(\pi_{\rm data} | \pi_{\infty}) \eqdef
+\int \left\| \nabla \log \left( \frac{\rmd \pi_{\rm data}}{\rmd \pi_{\infty}} \right) \right\|^2 \, \rmd \pi_{\rm data}\eqsp, 
+\end{align*}
+and consider the following assumptions.
+
+\begin{hypH}
+\label{hyp:sched}
+    The noise schedule $\sched$ is continuous, positive, non decreasing and such that $\int_0^\infty \beta(t)\rmd t = \infty$.
+\end{hypH}
+
+\begin{hypH}
+\label{hyp:fisher_info}
+    The data distribution is such that $\mathcal{I}(\pi_{\rm data} | \pi_{\infty})<\infty$.
+\end{hypH}
+
+
+\begin{hypH}
+\label{hyp:novikov}
+The parameter $\param\in\Theta$ and the schedule $\sched$ satisfy
+    \begin{align*}
+    \mathbb{E}\left[
+        \exp\left\{
+            \frac{1}{2} \int_0^T \bar \sched (t)
+                \left\|  \left(  \tilde s\left(T-t,\ola X_t\right)   -\tilde s_{\param} \left( T-t, \ola{X}_{t}    \right) \right)  \right\|^2  \rmd t\right\}\right]&<\infty\eqsp,
+    \end{align*}
+    with 
+    $\tilde s(t,x)\!\eqdef\! \nabla \log \tilde p_{t}(x)$.
+\end{hypH}
+
+
+
+
+
 \begin{theorem}
 \label{th:kl:sb}
-Define $h \eqdef \sup_{k \in \{1 , \ldots , N \} } (t_{k}-t_{k-1})$. Then,
+Assume that H\ref{hyp:sched}-\ref{hyp:novikov} hold. Define $h \eqdef \sup_{k \in \{1 , \ldots , N \} } (t_{k}-t_{k-1})$. Then, for all sufficiently small $h$,
 \begin{equation*}
-{\rm KL}\left( \pi_{\rm data} \middle|\middle| \pihat  \right) \leq \mathcal{E}_1^{\rm KL}(\sched) + \mathcal{E}_2^{\rm KL}(\param,\sched) + \mathcal{E}_3^{\rm KL}(\sched)\eqsp,
+{\rm KL}\left( \pi_{\rm data} \middle\| \pihat  \right) \leq \mathcal{E}_1^{\rm KL}(\sched) + \mathcal{E}_2^{\rm KL}(\param,\sched) + \mathcal{E}_3^{\rm KL}(\sched)\eqsp,
 \end{equation*}
 where 
 \begin{align*}
     &\mathcal{E}_1^{\rm KL}(\sched) = {\rm KL}\left( \pi_{\rm data} \middle|\middle| \pi_\infty  \right)  \exp\Big\{- \frac{1}{\sigma^2} \int_0^T \sched(s) \rmd s\Big\}\eqsp,\\
-    &\mathcal{E}_2^{\rm KL}(\param,\sched) = \sum_{k = 0}^{N-1}  \mathbb{E} \bigg[  \Big\|   \nabla \log \tilde p_{T-t_k}\Big(\overrightarrow X_{T-t_k}\Big)  - \tilde s_{\param}\Big(T-t_k,  \overrightarrow X_{T-t_k}\Big) \Big\|^2 \bigg]
-    % \\
-    % &\hspace{2cm}\times
+    &\mathcal{E}_2^{\rm KL}(\param,\sched) = \sum_{k = 0}^{N-1}  \mathbb{E} \bigg[  \Big\|   \nabla \log \tilde p_{T-t_k}\Big(\overrightarrow X_{T-t_k}\Big)  - \tilde s_{\param}\Big(T-t_k,  \overrightarrow X_{T-t_k}\Big) \Big\|_2^2 \bigg]
     \int^{T-t_k}_{T-t_{k+1}} \sched (t) \rmd t\eqsp,\\
     &\mathcal{E}_3^{\rm KL}(\sched) = 2 h  \sched (T) \mathcal{I}(\pi_{\rm data} | \pi_{\infty} )\eqsp.
 \end{align*}
 \end{theorem}
-
 The upper bound of Theorem \ref{th:kl:sb} involves  three different types of errors. The term $\mathcal{E}_1^{\rm KL}$ represents the mixing time of the OU forward process, 
 arising from the practical limitation of considering the forward process up to a finite time $T$. 
 The second term $\mathcal{E}_2^{\rm KL}$   corresponds to the approximation error, which stems from the use of a deep neural network to estimate the score function.  Finally, $\mathcal{E}_3^{\rm KL}$ is the  discretization error of the EI discretization scheme. This last term vanishes as the discretization grid is refined (i.e., $h\to 0$).
+
+\subsection{Proof of Theorem~\ref{th:kl:sb}}
+We are interested in the relative entropy of the training data distribution $\pi_{\rm data}$ with respect to the generated data distribution $ \pihat $. Leveraging the time-reverse property we have:
+
+\begin{align*}
+    \kl \left( \pi_{\rm data} \middle\| \pihat   \right)  = \kl\left( p_T Q_T \middle\| \pihat   \right)\eqsp.
+\end{align*}
+By the data processing inequality, 
+\begin{align*}
+     \kl \left( p_T Q_T \middle\| \pihat  \right) \leq \kl \left( p_T \mathbb{Q}_T \middle\| \pi_{\infty} \mathbb{Q}_T^{N,\theta}\right)\eqsp,
+\end{align*}
+where $\mathbb{Q}_T$ and $\mathbb{Q}_T^{N,\theta}$ denote the path measures of, respectively, the backward process and the SGM generation. Writing the backward time $\tau_t = T-t$ and its discretized version $\tau_k = T-t_k$, with $0=t_0<t_1<\ldots<t_N=T$, we have (by Lemma \ref{tvboundgirsanovproof}) that
+\begin{multline*}
+ \kl \left( \pi_{\rm data} \| \pihat   \right) \leq  \kl \left( p_T \| \pi_{\infty} \right) + \frac{1}{2} \int_0^T \frac{1}{\bar \sched(t)} \mathbb{E}\Bigg[ \Bigg\|  \frac{-  \bar \sched (t)}{2 \sigma^2} \overleftarrow{X}_t + \bar \sched (t) \nabla \log \tilde p_{\tau_t}\left( \ola{X}_t \right)    \\
+- \left( - \frac{ \bar \sched (t)}{2 \sigma^2} \overleftarrow{X}_t + \bar \sched (t) \tilde s_{\param} \left( \tau_k, \ola{X}_{t_k}    \right) \right) \Bigg\|^2 \Bigg] \rmd t \eqsp.
+\end{multline*}
+From there, the KL divergence can be split into the theoretical mixing time of the forward OU process and the approximation error for the score function made by the neural network, as follows:
+\begin{align*}
+ &\kl \left( \pi_{\rm data} \| \pihat \right) \leq \kl \left( p_T \| \pi_{\infty} \right) +  \frac{1}{2} \int_0^T \frac{1}{\bar \sched(t)} \mathbb{E}\Bigg[ \Bigg\| \bar \sched (t) \left(  \tilde s\left(\tau_t,\ola X_t\right) - \tilde s_{\param} ( \tau_k, \ola{X}_{t_k}    ) \right)  \Bigg\|^2 \Bigg] \rmd t\eqsp.
+\end{align*}
+By using the regular discretization of the interval $[0,T]$, one can disentangle the last term as follows:
+
+\begin{align*}
+ \kl \left( \pi_{\rm data} \middle\| \pihat \right)& \leq\kl \left( p_T \| \pi_{\infty} \right) + \frac{1}{2} \sum_{k = 0}^{N-1} \int_{t_k}^{t_{k+1}} \bar \sched (t) \mathbb{E} \left[  \left\|   \tilde s\left(\tau_t,\ola X_t\right)- \tilde s_{\param}\left(\tau_k, \ola X_{t_k} \right) \right\|^2 \right] \rmd t \\
+&\leq E_1(\sched) + E_2(\param,\sched) + E_3(\sched)\eqsp,
+\end{align*}
+where
+\begin{align}
+    E_1(\sched) &= \kl \left( p_T \| \gausspdf_{\sigma^2} \right)\eqsp,\label{eq:err:mix}\\
+    E_2(\param,\sched) &= \sum_{k = 0}^{N-1} \int_{t_k}^{t_{k+1}} \bar \sched (t)\mathbb{E} \left[  \left\|  \tilde s\left( \tau_k, \ola X_{t_k} \right)  - \tilde s_{\param}\left(\tau_k, \ola X_{t_k} \right) \right\|^2 \right] \rmd t\eqsp,\label{eq:err:approx}\\
+    E_3(\sched) &= \sum_{k = 0}^{N-1} \int_{t_k}^{t_{k+1}} \bar \sched (t)\mathbb{E} \left[  \left\| \tilde s\left(\tau_t,\ola X_t\right) -\tilde s\left( \tau_k, \ola X_{t_k} \right)   \right\|^2 \right] \rmd t\eqsp. \label{eq:err:discr}
+\end{align}
+Finishing the proof of Theorem~\ref{th:kl:sb} amounts to obtaining upper bounds for $E_1(\sched)$, $E_2(\param,\sched)$ and $E_3(\sched)$. This is done in Lemmas~\ref{lem:mix}, \ref{lem:approx} and \ref{lem:fish}, so that $E_1(\sched) \leq \mathcal{E}_1(\sched)$, $E_2(\param,\sched) \leq \mathcal{E}_2(\param,\sched)$ and $E_3(\sched) \leq \mathcal{E}_3(\sched)$.
+
+\begin{lemma} 
+\label{lem:mix}For any noise schedule $\beta$,
+    \begin{align*}
+    E_1(\sched) = 
+    \kl\left(p_T \| \pi_{\infty} \right) \leq  
+    \kl\left(\pi_{\rm data} \|  \pi_{\infty} \right) 
+    \exp\left(- \frac{1}{\sigma^2} \int_0^T \sched(s) \rmd s\right)  \eqsp.
+    \end{align*}
+\end{lemma}
+\begin{proof}
+The proof follows the same lines as \cite[Lemma 1]{franzese2023much}. The Fokker-Planck equation associated with \eqref{eq:forward-SDE:beta} is
+\begin{align*}
+    \partial_{t} p_{t}(x) = \frac{\sched(t)}{2\sigma^2} \text{div} \left( x p_{t} (x) \right) + \frac{\sched(t)}{2} \Delta p_{t} (x) =
+    \frac{\sched(t)}{2}\text{div} \left(\frac{1}{\sigma^2}x p_{t} (x) + \nabla p_{t} (x)\right)
+    \eqsp,
+\end{align*}
+for $t\in[0,T], x\in\rset^d$. Combing this with the derivation under the integral theorem, we get
+\begin{align*}
+    \frac{\partial}{ \partial t} \kl \left( p_t \|\gausspdf_{\sigma^2}  \right) &= \frac{\partial}{\partial t} \int_{\mathbb{R}^d}  \log \frac{p_t(x)}{\gausspdf_{\sigma^2}(x)} p_t(x) \rmd x \\
+    &= \int_{\mathbb{R}^d} \frac{\partial}{\partial t} p_t(x) \log \frac{p_t(x)}{\gausspdf_{\sigma^2}(x)}\rmd x + \int_{\mathbb{R}^d}\frac{p_t(x) \partial_t p_t(x)}{p_t(x)} \rmd x 
+    \\
+    &= \int_{\mathbb{R}^d} \frac{\partial}{\partial t} p_t(x) \log \frac{p_t(x)}{\gausspdf_{\sigma^2}(x)} \rmd x + \int_{\mathbb{R}^d} \frac{\partial}{\partial t} p_t(x) \rmd x
+    \\
+    &= \int_{\mathbb{R}^d} \frac{\sched(t)}{2} \text{div} \left( \frac{x}{\sigma^2} p_t(x) + \nabla p_t(x) \right) \log \frac{p_t(x)}{\gausspdf_{\sigma^2}(x)} \rmd x
+    \\
+    &= \frac{\sched(t)}{2} \int_{\mathbb{R}^d}  \text{div} \left(  - \nabla \log \gausspdf_{\sigma^2}(x) \; p_t(x)  +  \nabla p_t(x) \right) \log \frac{p_t(x)}{\gausspdf_{\sigma^2}(x)} \rmd x 
+    \\
+    &=  - \frac{\sched(t)}{2} \int_{\mathbb{R}^d} \left(- \nabla \log \gausspdf_{\sigma^2}(x) \; p_t(x)  +  \nabla p_t(x) \right)^\top \nabla \log \frac{p_t(x)}{\gausspdf_{\sigma^2}(x)} \rmd x 
+    \\
+    &= - \frac{\sched(t)}{2} \int_{\mathbb{R}^d} p_t(x) \left( - \nabla \log \gausspdf_{\sigma^2}(x)   +  \nabla \log p_t(x)\right)^\top \nabla \log \frac{p_t(x)}{\gausspdf_{\sigma^2}(x)} \rmd x\\
+    &= - \frac{\sched(t)}{2} \int_{\mathbb{R}^d} p_t(x) \left\| \nabla \log \frac{p_t(x)}{\gausspdf_{\sigma^2}(x)} \right\|^2 \rmd x\eqsp.
+\end{align*}
+Using the Stam-Gross logarithmic Sobolev inequality given in  Proposition~\ref{stam-gross}, we get
+\begin{align*}
+    \frac{\partial}{ \partial t} \kl \left( p_t \|\gausspdf_{\sigma^2}  \right)
+    & \leq - \frac{ \sched(t)}{\sigma^2} \kl \left( p_t \|\gausspdf_{\sigma^2}  \right)\eqsp.
+\end{align*}
+Applying Gronwall's inequality, we obtain
+\begin{align*}
+    \kl \left( p_T \|\gausspdf_{\sigma^2} \right) \leq \kl \left( p_0 \|\gausspdf_{\sigma^2} \right) \exp\left\{- \frac{1}{\sigma^2} \int_0^T \sched(s) \rmd s\right\}\eqsp, 
+\end{align*}
+which concludes the proof.
+\end{proof}
+
+
+\begin{lemma}
+\label{lem:approx}
+For all $\param$ and all $\beta$,
+\begin{align*}
+    E_2(\param,\sched) = \sum_{k = 1}^{N}  \mathbb{E} \left[  \left\|   \nabla \log \tilde p_{t_k}\left(\ora X_{t_k}\right) - \tilde s_{\param}\left(t_k, \ora X_{t_k}\right) \right\|^2 \right] \int_{t_k}^{t_{k+1}} \bar \sched (t) \rmd t\eqsp,
+\end{align*}
+    where $E_2(\param,\sched)$ is defined by \eqref{eq:err:approx}.
+\end{lemma}
+
+\begin{proof}
+By definition of $E_2(\param,\sched)$,
+\begin{align*}
+  E_2(\param,\sched) & = \sum_{k = 0}^{N-1} \int_{t_k}^{t_{k+1}} \bar \sched (t) \mathbb{E} \left[  \left\|   \nabla \log \tilde p_{T-t_k}\left(\ola X_{t_k}\right) - \tilde s_{\param}\left(T - t_k, \ola X_{t_k} \right) \right\|^2 \right] \rmd t \\
+  & = \sum_{k = 0}^{N-1}  \mathbb{E} \left[  \left\|   \nabla \log \tilde p_{T-t_k}\left(\ola X_{t_k}\right) - \tilde s_{\param}\left(T - t_k, \ola X_{t_k} \right) \right\|^2 \right] \int_{t_k}^{t_{k+1}} \bar \sched (t) \rmd t \\
+  & ={\sum_{k = 0}^{N-1}} \mathbb{E} \left[  \left\|   \nabla \log \tilde p_{t_k}\left(\ora X_{t_k}\right) - \tilde s_{\param}\left(t_k, \ora X_{t_k}\right) \right\|^2 \right] \int_{t_k}^{t_{k+1}} \bar \sched (t) \rmd t\eqsp,%\\
+\end{align*}
+where the last equality comes from the fact that the forward and backward processes have same marginals since $ \ora X_{T} \sim  p_T$.
+\end{proof}
+
+\begin{lemma}
+\label{lem:fish}
+Assume that H\ref{hyp:sched} holds. For all $T,\sigma>0$, $\param$ and all $\sched$,
+    \begin{align*}
+    E_3(\sched) \leq 2 h  \beta (T) \max \left\{ \frac{  h  \beta (T)  }{ 4 \sigma^2} ; 1  \right\} \mathcal{I}(\pi_{\rm data} | \pi_{\infty})   \eqsp,
+    \end{align*}
+    where $E_3(\sched)$ is defined by \eqref{eq:err:discr}.
+\end{lemma}
+
+\begin{proof}
+By Lemma \ref{score differential form},  with $Y_t \eqdef \nabla \log \tilde p_{T-t} (\ola X_t)$,
+\begin{align*}
+\rmd Y_t &= \frac{ \bar \sched(t)}{2 \sigma^2} Y_t \rmd t + \sqrt{\bar \sched(t)} Z_t \rmd B_t\eqsp. 
+\end{align*}
+By applying  Ito's lemma to the function $x \mapsto \|x\|^2$, we obtain
+\begin{align*}
+\rmd \|Y_t\|^2 = \left(\frac{\bar \sched (t)}{\sigma^2} \|Y_t\|^2 + \bar \sched (t) \|Z_t\|_{\mathrm{Fr}}^2 \right) \rmd t + \sqrt{\bar \sched (t)} Y_t^\top Z_t \rmd B_t\eqsp.
+\end{align*}
+Fix $\delta>0$.
+From \cite[Theorem~7.3, p.193]{baldi}, we have that $\left( \int_0^t g(s) Y_s^\top Z_s \rmd B_s\right)_{t \in [0,T-\delta]}$ is a square integrable martingale if 
+\begin{align*}
+\mathbb{E} \left[ \int_0^{T-\delta} g^2(s) \left\| Y_s^\top Z_s \right\|^2 \rmd s \right] < \infty\eqsp .
+\end{align*}
+From the Cauchy-Schwarz inequality, we get that 
+\begin{align*}
+    \mathbb{E} \left[ \left\| Y_s^\top Z_s \right\|^2_2 \right]
+     \leq
+    \mathbb{E} \left[ \left\| Y_s \right\|_2^2   \left\| Z_s \right\|_{\mathrm{Fr}}^2 \right] 
+    \leq
+    \mathbb{E} \left[ \left\| Y_s \right\|_2^4 \right]^{1/2}  \mathbb{E} \left[ \left\| Z_s \right\|_{\mathrm{Fr}}^4 \right]^{1/2}\eqsp .
+\end{align*}
+Applying Lemma \ref{score moment bound } and \ref{second derivative moment bound}, we get that both $\mathbb{E} [ \| Y_s \|_2^4 ]$ and $\mathbb{E} [ \| Z_s \|_2^4 ]$ are bounded by a quantity depending on $\sigma_{T-t}^{-8}$. As the term $\sigma_{T-t}^{-8}$ is uniformly bounded in $[0,T-\delta]$ and by Fubini's theorem, $\mathbb{E} [ \int_0^T g^2(s) \| Y_s^\top Z_s \|^2 \rmd s ]  =  \int_0^T g^2(s) \mathbb{E} [ \| Y_s^\top Z_s \|^2]   \rmd s < \infty$.  
+Therefore, $( \int_0^t g(s) Y_s^\top Z_s \rmd B_s )_{t \in [0,T-\delta]}$ is a square integrable martingale. Therefore, we have
+\begin{align*}
+\mathbb{E} \left[ \|Y_t\|^2 \right] - \mathbb{E} \left[ \|Y_{t_k}\|^2 \right] = \mathbb{E} \left[\int_{t_k}^t \frac{\bar \sched (s)}{\sigma^2} \|Y_s\|^2  \rmd s+ \int_{t_k}^t \bar \sched (s) \|Z_s\|_{\mathrm{Fr}}^2  \rmd s \right]\eqsp,
+\end{align*}
+and
+\begin{align}
+    \mathbb{E} \left[ \left\|  Y_t -  Y_{t_k} \right\|^2 \right] &=  \mathbb{E} \left[ \left\|  \int_{t_k}^t \frac{ \bar \sched(s)}{2 \sigma^2} Y_s \rmd s + \int_{t_k}^t \sqrt{\bar \sched(s)} Z_s \rmd B_s \right\|^2 \right]
+    \notag\\
+    & \leq 2 \mathbb{E} \left[ \left\|  \int_{t_k}^{t} \frac{ \bar \sched(s)}{2 \sigma^2} Y_s \rmd s \right\|^2  \right] +2 \mathbb{E} \left[ \int_{t_k}^{t} \left\| \sqrt{\bar \sched(s)} Z_s \rmd B_s \right\|^2 \right]
+    \notag\\
+    & \leq 2 \mathbb{E} \left[ \left\|  \frac{1}{2 \sigma} \int_{t_k}^{t} \sqrt{\bar \sched(s)} \frac{ \sqrt{\bar \sched(s)}}{ \sigma} Y_s \rmd s \right\|^2  \right] +2 \mathbb{E} \left[ \int_{t_k}^{t} \left\| \sqrt{\bar \sched(s)} Z_s \rmd B_s \right\|^2 \right]
+    \notag\\
+    & \leq \frac{1}{2 \sigma^2} \int_{t_k}^{t_{k +1}} \bar \sched (s) \rmd s \mathbb{E} \left[ \int_{t_k}^{t_{k +1}} \frac{\bar \sched(s)}{\sigma^2}  \left\|  Y_s \right\|^2 ds  \right] + 2 \mathbb{E} \left[  \int_{t_k}^{t_{k +1}} \bar \sched (s) \left\| Z_s \right\|^2_{\mathrm{Fr}} \rmd s \right] 
+    \notag\\
+    & \leq 2 \max \left\{ \frac{\int_{t_k}^{t_{k +1}} \bar \sched (s) \rmd s}{ 4 \sigma^2} , 1 \right\} \left( \mathbb{E} \left[ \|Y_{t_{k+1}}\|^2 \right] - \mathbb{E} \left[ \|Y_{t_k}\|^2 \right] \right)\eqsp. \label{eq:lemmaA3:ineq-telescopic}
+\end{align}
+Without loss of generality, we have that $t_{N-1} = T-\delta$.
+Then, the discretization error can be bounded as follows
+\begin{align*}
+    &\sum_{k = 0}^{N-1} \int_{t_k}^{t_{k+1}} \bar \sched (t) \mathbb{E} \left[  \left\|   \nabla \log \tilde p_{T-t}\left(\ola X_t\right) - \nabla \log \tilde p_{T-t_k}\left(\ola X_{t_k}\right) \right\|^2 \right] \rmd t
+    \\
+    &\hspace{.1cm}= 
+    \sum_{k = 0}^{N-1} \int_{t_k}^{t_{k+1}} \bar \sched (t) \mathbb{E} \left[  \left\|   Y_t - Y_{t_k} \right\|^2 \right] \rmd t
+    \\
+    &\hspace{.1cm} \leq
+    2 \sum_{k = 0}^{N-1} \int_{t_k}^{t_{k+1}} \bar \sched (t)  \max \left\{ \frac{\int_{t_k}^{t_{k +1}} \bar \sched (s) \rmd s}{ 4 \sigma^2} , 1 \right\} \left( \mathbb{E} \left[ \|Y_{t_{k+1}}\|^2 \right] - \mathbb{E} \left[ \|Y_{t_k}\|^2 \right] \right) \rmd t
+    \\
+    &\hspace{.1cm} \leq
+    2 \sum_{k = 0}^{N-1}  \max \left\{ \frac{\int_{t_k}^{t_{k +1}} \bar \sched (s) \rmd s}{4 \sigma^2} , 1 \right\} \left( \mathbb{E} \left[ \|Y_{t_{k+1}}\|^2 \right] - \mathbb{E} \left[ \|Y_{t_k}\|^2 \right] \right) \int_{t_k}^{t_{k+1}} \bar \sched (t) \rmd t
+    \\
+    &\hspace{.1cm} \leq
+    2 \sum_{k = 0}^{N-1}  \max \left\{ \frac{ \left( \int_{t_k}^{t_{k +1}} \bar \sched (s) \rmd s \right)^2 }{ 4 \sigma^2} , \int_{t_k}^{t_{k +1}} \bar \sched (s) \rmd s \right\} \left( \mathbb{E} \left[ \|Y_{t_{k+1}}\|^2 \right] - \mathbb{E} \left[ \|Y_{t_k}\|^2 \right] \right)
+    \\
+    &\hspace{.1cm} \leq
+    2 \max_{0 \leq k \leq N-1} \left\{ \max \left\{ \frac{ \left( \int_{t_k}^{t_{k +1}} \bar \sched (s) \rmd s \right)^2 }{ 4 \sigma^2} , \int_{t_k}^{t_{k +1}} \bar \sched (s) \rmd s \right\} \right\}  \mathbb{E} \left[ \left\|\nabla \log \tilde p_{T-t_{N-1}} \left(\ola X_{t_{N-1}} \right) \right\|^2 \right]\eqsp.
+\end{align*}
+By H\ref{hyp:sched}, $t \mapsto \beta(t)$ is increasing, so that $t \mapsto \bar \sched(t)$ is decreasing. 
+Therefore, using that since $\ola X_0 \sim p_T$, $\ola X_{T - \delta}$ and $\ora X_{\delta}$ have the same distribution, yields,
+\begin{align*}
+     \sum_{k = 0}^{N-1} \int_{t_k}^{t_{k+1}} &\bar \sched (t) \mathbb{E} \left[  \left\|   \nabla \log \tilde p_{T-t}\left(\ola X_t\right) - \nabla \log \tilde p_{T-t_k}\left(\ola X_{t_k}\right) \right\|^2 \right] \rmd t
+    \\
+    & \leq
+    2 \max_{0 \leq k \leq N-1} \left\{ \max \left\{ \frac{ \left( (t_{k +1} - t_k) \bar \sched (t_k) \right)^2 }{ 4 \sigma^2} , (t_{k+1}  - t_k) \bar \sched (t_k)  \right\} \right\}\\
+    &\hspace{6cm}\times\mathbb{E} \left[ \left\|\nabla \log \tilde p_{T-t_{N-1}} \left(\ola X_{t_{N-1}} \right) \right\|^2 \right] 
+    \\
+    & \leq
+    2 \max_{0 \leq k \leq N-1}
+    \left\{\max \left\{ \frac{  h^2 \bar \sched^2 (t_k)  }{4 \sigma^2} , h \bar \sched(t_k)  \right\} \right\}  \mathcal{I}(p_{T} Q_{T-\delta} | \pi_{\infty})   \\
+    & \leq 2 h \bar \sched (0) \max \left\{ \frac{  h \bar \sched (0)  }{ 4 \sigma^2} , 1  \right\} \mathcal{I}(p_{T} Q_{T-\delta} | \pi_{\infty})   \\
+    & \leq 2 h  \beta (T) \max \left\{ \frac{  h  \beta (T)  }{ 4 \sigma^2} , 1  \right\} \mathcal{I}(p_T Q_{T-\delta} | \pi_{\infty}) \eqsp.
+\end{align*}
+Finally, following the steps of the proof of \cite[Lemma 2]{conforti2023}, we can consider the limit when $\delta$ goes to zero, under Assumption H\ref{hyp:fisher_info}, concluding the proof.
+
+\end{proof}
+
+\subsection{Technical results}
+
+\begin{lemma} \label{tvboundgirsanovproof} 
+Let  $T > 0$ and $b_1, b_2 : [0, T] \times C([0, T], \mathbb{R}^d) \rightarrow \mathbb{R}^d $ be measurable functions such that for $i\in \{1, 2\}$,
+\begin{align}\label{eq:uniqueness_KL_SDE}
+\rmd X_t^{(i)} = b_i\left(t, ( X_s^{(i)})_{s \in [0, T]}\right) \rmd t + \sqrt{\sched(T-t)} \rmd B_t
+\end{align}
+admits a unique strong solution with  $X_0^{(i)} \sim  \pi_0^{(i)}$. Suppose that $(b_i(t, (X_s^{(i)})_{s \in [0, t]}))_{t \in [0, T]} $  is progressively measurable, with Markov semi-group $(P_t^{(i)})_{t \ge 0}$. In addition, assume that 
+\begin{equation}
+\label{eq:novi}
+  \mathbb{E} \left[ \exp\left\{  \frac{1}{2} \int_0^T \frac{1}{{\sched(T-s)}}  \left\|b_1\left(s, \left(X^{(1)}_u\right)_{ u \in [0,s]}\right) - b_2\left(s, \left(X^{(1)}_u\right)_{ u \in [0,s]}\right) \right\|^2 \rmd s \right\} \right] < \infty\eqsp.  
+\end{equation}
+Then,
+\begin{multline}
+\kl \left( \pi_0^{(1)} P_T^{(1)} \| \pi_0^{(2)} P_T^{(2)} \right) \leq \kl \left(\pi_0^{(1)} \| \pi_0^{(2)} \right)\\
++ \frac{1}{2} \int_0^T \frac{1}{\sched(T-t)} \mathbb{E}\left[\left\|b_1\left(s, \left(X^{(1)}_u\right)_{ u \in [0,s]}\right) - b_2\left(s, \left(X^{(1)}_u\right)_{ u \in [0,s]}\right) \right\|^2\right] \rmd t\eqsp. 
+\end{multline}
+\end{lemma} 
+
+
+\begin{proof}
+Consider the probability space $(\Omega,(\mathcal{F}_t)_{0\leq t\leq T},\mathbb{P})$ and for $i \in\{1,2\}$, let \( \mu^{(i)} \) be the distribution of \( ( X_t^{(i)})_{t \in [0,T]} \) on the Wiener space \( (C([0, T]; \mathbb{R}^d), \mathcal{B}(C([0, T]; \mathbb{R}^d))) \) with \( X_0^{(i)} \sim \pi_0^{(i)} \). Define $u(t,\omega)$ as
+\begin{align*}
+u(t,\omega) \eqdef \sched(T-t)^{-1/2}\left( b_1\left(t, \left(X^{(1)}_u\right)_{ u \in [0,t]}\right) -  b_2\left(t, \left(X^{(1)}_u\right)_{ u \in [0,t]}\right)\right)\eqsp,
+\end{align*}
+and define $\rmd \mathbb{Q}/\rmd\mathbb{P}(\omega) = M_T (\omega)$ where, for $t \in[0,T]$,
+\begin{align*}
+    M_t(\omega)  = \exp\left\{ - \int_0^t u(s, \omega)^\top \rmd B_s - \frac{1}{2} \int_0^t \|u (s , \omega)\|^2 \rmd s\right\}\eqsp.
+\end{align*}
+From \eqref{eq:novi}, the Novikov's condition is satisfied \cite[Chapter 3.5.D]{karatzas2012brownian}, thus the process $(M_t)_{0\leq t\leq T}$ is a martingale. 
+Applying Girsanov theorem,  $\rmd \bar B_t = \rmd B_t + u(t, (X^{(1)}_s)_{s \in [0,t]}) \rmd t$ is a Brownian motion under the measure $\mathbb{Q}$. Therefore,
+\begin{align*}
+\rmd X_t^{(1)} = b_1\left(t, \left(X^{(1)}_u\right)_{ u \in [0,t]}\right) \rmd t + \sqrt{\sched(T-t)} \rmd B_t =
+b_2\left(t, \left(X^{(1)}_u\right)_{ u \in [0,t]}\right) \rmd t + \sqrt{\sched(T-t)} \rmd \bar B_t\eqsp.
+\end{align*}
+Using the uniqueness in law of \eqref{eq:uniqueness_KL_SDE}, the law of $X^{(1)}$ under $\mathbb{P}$ is the same as the one of $\bar X^{(2)}$ under $\mathbb{Q}$, with $\bar X^{(2)}$ solution of \eqref{eq:uniqueness_KL_SDE} with $i=2$ and $\bar X^{(2)}_0=\pi^{(1)}_0$. Denote by $\bar\mu^{(2)}$ the law of $\bar X^{(2)}$.
+Therefore,
+\begin{eqnarray*}
+\mu^{(1)}(A) = \mathbb{P}(X^{(1)}\in A) = \mathbb{Q}(\bar X^{(2)}\in A) = \int \1_A(\bar X^{(2)}(\omega))\mathbb{Q}(\rmd\omega) \eqsp,%= \int_A M_t \mu^{(2)}(\rmd y)\eqsp,
+\end{eqnarray*}
+which implies that
+\begin{align*}
+\frac{\rmd \bar\mu^{(2)}}{\rmd \mu^{(1)}} =  M_T\eqsp.
+\end{align*}
+Hence, we obtain that
+\begin{align*}
+  \kl \left(\mu^{(1)} \middle\| \mu^{(2)}\right) 
+  &= \kl \left( \pi_0^{(1)} \middle\| \pi_0^{(2)} \right) + \mathbb{E}  \left[\log\left(\frac{\rmd \mu^{(1)}}{\rmd \bar \mu^{(2)}}\right)\right]\\
+  & = \kl \left( \pi_0^{(1)} \middle\| \pi_0^{(2)} \right) +  \mathbb{E}  \left[  \int_0^t u(s, \omega)^\top \rmd B_s + \frac{1}{2} \int_0^t \|u (s , \omega)\|^2 \rmd s \right] \\
+  &= \kl \left( \pi_0^{(1)} \middle\| \pi_0^{(2)} \right) +  \frac{1}{2} \int_0^T \frac{1}{\sched(T-t)} \mathbb{E}\left[ \left\| b_1(t, (X_s^{(1)})_{s \in [0, t]}) - b_2(t, (X_s^{(1)})_{s \in [0, t]}) \right\|^2 \right] \rmd t\eqsp,
+\end{align*}
+which concludes the proof.
+\end{proof}
+
+\begin{lemma}
+\label{stam-gross}
+Let $p$ be a probability density function on $\rset^d$. For all $\sigma^2>0$,
+    \begin{equation*}
+\kl \left(p \| \gausspdf_{\sigma^2 }\right) = \int p(x) \log \frac{p(x)}{\gausspdf_{\sigma^2 }(x)} \, \rmd x \leq \frac{\sigma^2 }{2} \int \left\|\nabla \log \frac{p(x)}{\gausspdf_{\sigma^2 }(x)} \right\|^2 \, p(x) \, \rmd x.
+\end{equation*}
+\end{lemma}
+\begin{proof}
+ Define $f_{\sigma^2}:x\mapsto p(x)/\varphi_{\sigma^2}(x)$. Since $\nabla^2 \log \varphi_{\sigma^2}(x) = -\sigma^{-2} \mathrm{I}_d$, the  Bakry-Emery criterion is satisfied with constant ${\sigma^2}^{-1}$, see \cite{bakry2014analysis,villani2021topics,talagrand1996transportation}. By the classical  logarithmic Sobolev inequality,
+\begin{align*}
+\int f_{\sigma^2}(x)\log f_{\sigma^2}(x)\varphi_{\sigma^2}(x)\rmd x \leq \frac{{\sigma^2}}{2}\int \frac{\|\nabla f_{\sigma^2}(x)\|^2}{f_{\sigma^2}(x)}\varphi_{\sigma^2}(x)\rmd x\eqsp,
+\end{align*}
+which concludes the proof.
+\end{proof}
+
+\begin{lemma} \label{score differential form}
+ Define $Y_t \eqdef \nabla \log \tilde p_{T-t} (\ola X_t)$ and  $Z_t \eqdef \nabla^2 \log \tilde p_{T-t} (\ola X_t)$, where $\{\ola X_t\}_{t\geq 0}$ is a weak solution to \eqref{eq:backward:sde}. Then, 
+\begin{align}\label{eq:SDE_for_Y}
+    \rmd Y_t = \left( \frac{\bar g^2(t)}{\sigma^2} - \bar \alpha(t) \right) Y_t \rmd t - \frac{2}{\sigma^2} \left( \frac{\bar g^2(t)}{2 \sigma^2} - \bar \alpha(t) \right) \ola X_t \rmd t + \bar g(t) Z_t \rmd \bar B_t\eqsp.
+\end{align}
+\end{lemma}
+
+\begin{proof}
+The Fokker-Planck equation associated with the forward process \eqref{eq:forward-SDE:beta} is
+\begin{align}
+\label{eq:fp}
+    \partial_{t} p_{t}(x) = \alpha (t) \text{div} \left( x p_{t} (x) \right) + \frac{g^2 (t)}{2} \Delta p_{t} (x)\eqsp,
+\end{align}
+for $x \in \rset^d$. First, we prove that $\tilde p_t$ satisfies the following PDE
+\begin{equation}\label{eq:PDE_log_p_t}
+    \begin{split}
+        \partial_{t} \log \tilde p_{t}(x)  = d \left(  \bar \alpha(t) - \frac{\bar g^2(t)}{2 \sigma^2} \right) + \langle \nabla \log \tilde p_{t}(x),x \rangle  \left( \bar \alpha(t) - \frac{ \bar g^2(t)}{\sigma^2 } \right)  + \frac{\|x\|^2}{\sigma^2}  \left( \frac{\bar g^2(t)}{2 \sigma^2} - \bar \alpha(t) \right) \\+ \frac{\bar g^2(t)}{2} \frac{\Delta \tilde p_{t}(x)}{\tilde p_{t}(x)}\eqsp.
+    \end{split}
+\end{equation}
+Using that $\nabla \log \gausspdf_{\sigma^2}(x) = -x/\sigma^2$, we have
+\begin{align*}
+ \text{div} ( x p_{t} (x) )
+ &=d \;p_{t}(x) + p_{t} (x)  \;x^\top \nabla \log p_{t} (x) \\
+ &= \gausspdf_{\sigma^2}(x)\left(d \;\tilde p_{t}(x)  + \tilde p_{t}(x)  \nabla \log \tilde p_{t}(x)^\top x - \frac{\|x\|}{\sigma^2} \right)\\
+ &= \gausspdf_{\sigma^2}(x)\left(d \;\tilde p_{t}(x)  + \nabla \tilde p_{t}(x)^\top x - \frac{\|x\|}{\sigma^2} \tilde p_{t}(x)\right)\eqsp.
+\end{align*}
+Then, since $\Delta \gausspdf_{\sigma^2}(x) =(\gausspdf_{\sigma^2}(x)/\sigma^2) \left(\|x\|^2/\sigma^2 -d \right)$, we get
+\begin{align*}
+    \Delta p_{t}(x) &= \tilde p_{t}(x) \Delta \gausspdf_{\sigma^2}(x) + 2  \nabla \tilde p_{t}(x)^\top \nabla \gausspdf_{\sigma^2}(x) + \gausspdf_{\sigma^2}(x) \Delta \tilde p_{t}(x)
+    \\
+    &=\gausspdf_{\sigma^2}(x) \left(
+    \frac{\tilde p_{t}(x)}{\sigma^2} \left( \frac{\|x\|^2}{\sigma^2} - d \right) - \frac{2}{\sigma^2}\nabla \tilde p_{t}(x)^\top x + \Delta \tilde p_{t}(x) \right)
+    \eqsp.
+\end{align*}
+Combining these results with \eqref{eq:fp}, we obtain
+\begin{align*}
+     \partial_{t} \tilde p_{t}(x)&= d\; \tilde p_{t}(x) \left(  \alpha(t) - \frac{g^2(t)}{2 \sigma^2} \right) + \nabla \tilde p_{t}(x)^\top x \left( \alpha(t) - \frac{ g^2(t)}{\sigma^2 } \right)  \\
+     &\hspace{3cm}+ \tilde p_{t}(x)\frac{\|x\|^2}{\sigma^2} \left( \frac{g^2(t)}{2 \sigma^2} - \alpha(t) \right) + \frac{g^2(t)}{2} \Delta \tilde p_{t}(x)\eqsp. 
+\end{align*}
+Hence, diving by $\tilde p_t$ yields \eqref{eq:PDE_log_p_t}. The previous computation, together with the fact that $\Delta \tilde p_{t}/\tilde p_{t} = \Delta \log \tilde p_{t} + \|\nabla \log \tilde p_{t}\|^2$, yields that the function $\phi_t(x) \eqdef \log \tilde p_{T-t} (x)$ is a solution to the following PDE
+\begin{align}\label{eq:PDE_phi_t}
+\partial_t \phi_t(x) &= - d \left(  \bar \alpha(t) - \frac{\bar g^2(t)}{2 \sigma^2} \right) -  \nabla \phi_t (x)^\top x \left( \bar \alpha(t) - \frac{\bar g^2(t)}{\sigma^2 } \right)  \\
+&\qquad- \frac{ \|x\|^2}{\sigma^2} \left( \frac{\bar g^2(t)}{2 \sigma^2} - \bar \alpha(t) \right) - \frac{\bar g^2(t)}{2} \left( \Delta \phi_t(x) + \| \nabla \phi_t(x)\|^2 \right)\eqsp. 
+\end{align}
+Following the lines of \cite[Proposition 1]{conforti2023}, we get that, since $\alpha$ and $g$ are continuous and non-increasing, the map $p_t$, solution to \eqref{eq:fp}, belongs to $C^{1,2}((0,T]\times\rset^d)$.
+By \eqref{eq:backward:sde}, as $Y_t = \nabla\phi_{t}(\ola X_t)$, we can apply Ito's formula and obtain, writing $\bar \gamma(t) = \bar \alpha(t) - \bar g(t)^2/\sigma^2$,
+\begin{align*}
+\rmd  Y_t &=
+\left[
+    \partial_t \nabla \phi_t\left(\ola X_t\right) + \nabla^2 \phi_t\left(\ola X_t\right)\left(    
+        \bar\gamma(t)\ola X_t + \bar g^2 (t) \nabla\phi_t\left(\ola X_t\right)
+    \right)+
+    \frac{\bar g^2(t)}{2} \Delta \nabla \phi_t\left(\ola X_t\right)
+\right]\rmd t \\
+&\qquad\qquad\qquad\qquad\qquad\qquad
+\qquad\qquad\qquad\qquad\qquad\qquad
+\qquad\qquad+ \bar g(t) \nabla^2 \phi_t\left(\ola X_t\right) \rmd \bar B_t
+\\
+&=
+\left[\nabla\left(
+        \partial_t \phi_t\left(\ola X_t\right)+
+        \frac{\bar g^2(t)}{2}\left(\Delta \phi_t\left(\ola X_t\right)+
+        \left\|\nabla\phi_t\left(\ola X_t\right)\right\|^2\right)
+    \right) + 
+    \bar\gamma(t)
+    \nabla^2 \phi_t\left(\ola X_t\right) \ola X_t
+\right]\rmd t \\
+&\qquad\qquad\qquad\qquad\qquad\qquad
+\qquad\qquad\qquad\qquad\qquad\qquad
+\qquad\qquad + \bar g(t) \nabla^2 \phi_t\left(\ola X_t\right) \rmd \bar B_t\eqsp,
+% \\
+\end{align*}
+using that $ 2 \nabla^2 \phi_t(x)  \nabla \phi_t(x) = \nabla \| \nabla \phi_t(x) \|^2$. Using \eqref{eq:PDE_phi_t}, we get
+\begin{align*}
+\rmd  Y_t &=
+\left[
+    - \bar\gamma(t)\nabla \psi_t\left(\ola X_t\right)  
+        + \frac{2}{\sigma^2}\left( \bar \alpha(t) - \frac{\bar g^2(t)}{2 \sigma^2} \right)  \ola X_t
+    + \bar\gamma(t) \nabla^2 \phi_t\left(\ola X_t\right) \ola X_t
+\right]\rmd t \\
+&\qquad\qquad\qquad\qquad\qquad\qquad
+\qquad\qquad\qquad\qquad\qquad
+\qquad\qquad\qquad+ \bar g(t) \nabla^2 \phi_t\left(\ola X_t\right) \rmd \bar B_t\eqsp,
+\end{align*}
+with $\psi_t\left(x\right) \eqdef \nabla \phi_t(x)^\top x$. With the identity $\nabla \left( x^\top \nabla \phi_t(x) \right) = \nabla \phi_t (x) + \nabla^2 \phi_t(x) x$, we have
+\begin{align*}
+\rmd  Y_t &=
+\left[
+    \left( \frac{\bar g^2(t)}{\sigma^2 } - \bar \alpha(t) \right)\nabla \phi_t\left(\ola X_t\right)
+        + \frac{2}{\sigma^2}\left( \bar \alpha(t) - \frac{\bar g^2(t)}{2 \sigma^2} \right)  \ola X_t
+\right]\rmd t + \bar g(t) \nabla^2 \phi_t\left(\ola X_t\right) \rmd \bar B_t
+\\
+&=
+\left[
+    \left( \frac{\bar g^2(t)}{\sigma^2 } - \bar \alpha(t) \right)Y_t
+        + \frac{2}{\sigma^2}\left( \bar \alpha(t) - \frac{\bar g^2(t)}{2 \sigma^2} \right)  \ola X_t
+\right]\rmd t + \bar g(t) Z_t \rmd \bar B_t\eqsp,
+\end{align*}
+which concludes the proof.
+\end{proof}
+
+
+\begin{lemma} \label{score moment bound }
+Let $Y_t \eqdef \nabla \log \tilde p_{T-t} ( \ola X_t )$, with $\ola X$ satisfying \eqref{eq:backward:sde}. There exists a constant $C>0$ such that
+\begin{align}\label{eq:moment4_Y}
+\mathbb{E} \left[ \left\| Y_t \right\|^4 \right] \leq C \left(
+    \sigma_{T-t}^{-4}
+    \E\left[\left\| Z \right\|^4\right] + \sigma^{-8} \E\left[\left\| \ora X_0 \right\|^4 \right]
+     \right),
+\end{align}
+with $Z\sim\mathcal{N}(0,\mathrm{I}_d)$ and $\sigma_t^2$ as in \eqref{eq:def:m:sigma}.
+\end{lemma}
+
+\begin{proof}
+The transition density $q_t(y,x) $ associated with the semi-group of the process (\ref{eq:forward-SDE:beta}) is given by 
+\begin{align*}
+q_t(y,x) =  \left(2 \pi \sigma_t^2 \right)^{-d/2} \exp\left( { \frac{-\left\| x - y \exp\left({- \int_0^t \alpha (s) \rmd s}\right) \right\|^2}{2 \sigma_t^2}} \right)\eqsp. 
+\end{align*}
+Therefore, we have 
+\begin{align*}
+    \nabla \log p_{T-t} (x) &= \frac{1}{p_{T-t}(x)} \int p_0(y)\nabla_x q_{T-t}(y,x) \rmd y \\
+    &= \frac{1}{p_{T-t}(x)} \int p_0(y) \frac{y \exp\left({- \int_0^{T-t} \alpha (u) \rmd u}\right) - x }{\sigma^2_{T-t}}
+    q_{T-t}(y,x) \rmd y\eqsp. 
+\end{align*}
+This, together with the definition of $\tilde p$, yields 
+\begin{align*}
+\nabla \log \tilde p_{T-t} \left( \ora X_{T-t} \right) = \sigma_{T-t}^{-2} \mathbb{E} \left[ \ora X_0 \rme^{- \int_0^{T-t} \alpha (u) \rmd u} - \ora X_{T-t} \middle| \ora X_{T-t}\right] + \sigma^{-2}\ora X_{T-t}\eqsp.
+\end{align*}
+Using Jensen's inequality for conditional expectation, there exists a constant $C>0$ (which may change from line to line) such that 
+\begin{align*}
+     \left\| \nabla \log \tilde p_{T-t} \left( \ora X_{T-t} \right) \right\|^4 
+     & \leq
+     C\left(\sigma_{T-t}^{-8} \left\| \mathbb{E} \left[  \ora X_{0} \rme^{- \int_0^{T-t} \alpha (s) \rmd s} - \ora X_{T-t} \middle| \ora X_{T-t}  \right] \right\|^4+
+     \sigma^{-8} \left\|\ora X_{T-t}\right\|^4
+     \right)\\
+    & \leq C\left(\sigma_{T-t}^{-8}  \mathbb{E} \left[ \left\|  \ora X_{0} \rme^{- \int_0^{T-t} \alpha (s) \rmd s} - \ora X_{T-t} \right\|^4 \middle| \ora X_{T-t}  \right]+
+     \sigma^{-8}\left\|\ora X_{T-t}\right\|^4
+     \right)\eqsp.
+\end{align*}
+Note that $\ora X_t$ has the same law as $\exp(-\int_0^t \alpha(s) \rmd s) \ora X_0  + \sigma_t Z$, with $Z \sim \mathcal{N}(0, \mathrm{I}_d)$. This means that we have that
+\begin{align*}
+     \E\left[\left\| \nabla \log p_{T-t} \left( \ora X_{T-t} \right) \right\|^4\right] & \leq C\sigma_{T-t}^{-4} \left(    \E\left[\left\| Z \right\|^4\right] + \E\left[\left\| \ora X_0 \right\|^4 \right]
+     \right)\eqsp. 
+\end{align*}
+Finally,
+\begin{align*}
+    \mathbb{E}  \left[ \left\| Y_t \right\|^4  \right]      = \mathbb{E}  \left[ \left\| \nabla \log \tilde p_{T-t} \left( \ola X_t \right) \right\|^2  \right]
+    &= \mathbb{E}  \left[ \left\| \nabla \log \tilde p_{T-t} \left( \ora X_{T-t} \right) \right\|^4  \right] \\
+    &\leq \sigma_{T-t}^{-4}\mathbb{E}  \left[ \left\| N \right\|^4 \right]
+    \\ &\leq C \left(
+    \sigma_{T-t}^{-4}
+    \E\left[\left\| N \right\|^4\right] + \sigma^{-8} \E\left[\left\| \ora X_0 \right\|^4 \right]
+     \right)\eqsp,
+\end{align*}
+which concludes the proof.
+\end{proof}
+
+\begin{lemma} \label{second derivative moment bound}
+Let $Z_t \eqdef \nabla^2 \log \tilde p_{T-t} ( \ola X_t )$, where $\{\ola X_t\}_{t\geq 0}$ is a weak solution to \eqref{eq:backward:sde}. There exists a constant $C>0$ such that
+\begin{align}\label{eq:moment4_Z}
+\mathbb{E} \left[ \left\| Z_t \right\|^4 \right] \leq C \left(\sigma^{-8}_{T-t}+ \sigma^{-8}\right) \left( \mathbb{E} \left[ \left\|   Z \right\|^8_2 \right] + d^4 \right)
+\eqsp,
+\end{align}
+with $Z\sim\mathcal{N}(0,\mathrm{I}_d)$ and $\sigma_t^2$ as in \eqref{eq:def:m:sigma}.
+\end{lemma}
+
+\begin{proof}
+Let $q_t(y,x) $ be the transition density associated to the semi-group of the process (\ref{eq:forward-SDE:beta}). Write 
+\begin{align*}
+    &\nabla^2 \log p_{T-t} (x)\\
+    & \hspace{.3cm}=
+    \nabla \left( \frac{1}{p_{T-t}(x)} \int p_0(y) \frac{y e^{- \int_0^{T-t} \alpha (s) \rmd s} - x }{\sigma^2_{T-t}}q_{T-t}(y,x) \rmd y \right) 
+    \\
+    & \hspace{.3cm}= -  \frac{\nabla p_{T-t} (x)}{p_{T-t}^2(x)} \left( \int p_0(y) \frac{y e^{- \int_0^{T-t} \alpha (s) \rmd s} - x }{\sigma^2_{T-t}} q_{T-t}(y,x)\rmd y \right)^\top
+    \\
+    &\hspace{.3cm}\quad
+    +
+    \frac{1}{p_{T-t}(x)} \nabla\int p_0(y) \frac{y e^{- \int_0^{T-t} \alpha (s) \rmd s} - x }{\sigma^2_{T-t}}
+    q_{T-t}(y,x) \rmd y \\
+    & \hspace{.3cm}= \frac{1}{\sigma^2_{T-t}\;p_{T-t}(x)}
+    \Bigg(- \int \left( \frac{\nabla p_{T-t} (x)}{p_{T-t}(x)} \right) \left(  \frac{y e^{- \int_0^{T-t} \alpha (s) \rmd s} - x }{\sigma^2_{T-t}} \right)^\top 
+    q_{T-t}(y,x) p_0(y) \rmd y
+    \\
+    &\hspace{.3cm}\quad 
+    - \mathrm{I}_d + 
+    \int \frac{1}{\sigma^2_{T-t}}\left(  y e^{- \int_0^{T-t} \alpha (s) \rmd s} - x  \right)
+    \left(  
+    y e^{- \int_0^{T-t} \alpha (s) \rmd s} - x  \right)^\top 
+    q_{T-t}(y,x) p_0(y) \rmd y
+    \Bigg)
+    \eqsp.
+\end{align*}
+Therefore, 
+\begin{align*}
+     &\nabla^2 \log \tilde p_{T-t} \left( \ora X_{T-t} \right)\\ 
+     & \hspace{.3cm}=
+     - \frac{1}{\sigma_{T-t}^{2}}\left(  \mathbb{E} \left[ \left( \frac{\nabla p_{T-t} \left( \ora X_{T-t} \right)}{p_{T-t} \left( \ora X_{T-t} \right)} \right) \left(  \ora X_0 e^{- \int_0^{T-t} \alpha (s) \rmd s} - \ora X_{T-t} \right)^\top
+     \middle| \ora X_{T-t}   \right] + \mathrm{I}_d\right)
+     \\
+    & \hspace{.3cm}\quad 
+    + \sigma_{T-t}^{-4}  \mathbb{E} \left[ \left(\ora X_0 e^{- \int_0^{T-t} \alpha (s) \rmd s} - \ora X_{T-t} \right) \left(\ora X_0 e^{- \int_0^{T-t} \alpha (s) \rmd s} - \ora X_{T-t} \right)^\top \middle| \ora X_{T-t} \right] +
+    \sigma^{-2}\mathrm{I}_d
+    \\
+    &\hspace{.3cm} = - \sigma_{T-t}^{-4}  \left(\mathbb{E} \left[ \ora X_0 e^{- \int_0^{T-t} \alpha (s) \rmd s} - \ora X_{T-t} \middle| \ora X_{T-t}\right] \right)\left( \mathbb{E} \left[    \ora X_0 e^{- \int_0^{T-t} \alpha (s) \rmd s} - \ora X_{T-t}  \middle| \ora X_{T-t}  \right] \right)^\top \\
+    & \hspace{.5cm}\quad  + \left(\sigma^{-2}- \sigma_{T-t}^{-2}\right) \mathrm{I}_d 
+    \\
+   & \hspace{.3cm}\quad
+   + \sigma_{T-t}^{-4}  \mathbb{E} \left[ \left(\ora X_0 e^{- \int_0^{T-t} \alpha (s) \rmd s} - \ora X_{T-t} \right) \left(\ora X_0 e^{- \int_0^{T-t} \alpha (s) \rmd s} - \ora X_{T-t} \right)^\top \middle| \ora X_{T-t} \right]\eqsp.
+\end{align*}
+There exists a constant $C>0$ (which may change from line to line) such that
+\begin{align*}
+    &\mathbb{E} \left[ \left\| \nabla^2 \log p_{T-t} \left( \ora X_{T-t} \right) \right\|^4_{\mathrm{Fr}} \right]\\
+    & \leq \frac{C}{\sigma_{T-t}^{16}} \mathbb{E} \left[\left\| \mathbb{E} \left[ \ora X_0 e^{- \int_0^{T-t} \alpha (s) \rmd s} - \ora X_{T-t} \middle| \ora X_{T-t}\right] \mathbb{E} \left[    \ora X_0 e^{- \int_0^{T-t} \alpha (s) \rmd s} - \ora X_{T-t}  \middle| \ora X_{T-t}   \right]^\top \right\|^4_{\mathrm{Fr}} \right]
+    \\
+    & \quad + C \left(\sigma^{-8}_{T-t}+ \sigma^{-8}\right) d^4
+    \\
+    & \quad + \frac{C}{\sigma_{T-t}^{16}} \mathbb{E } \left[ \left\| \mathbb{E} \left[ \left(\ora X_0 e^{- \int_0^{T-t} \alpha (s) \rmd s} - \ora X_{T-t} \right) \left(\ora X_0 e^{- \int_0^{T-t} \alpha (s) \rmd s} - \ora X_{T-t} \right)^\top 
+    \middle| \ora X_{T-t} \right]  \right\|^4_{\mathrm{Fr}} \right].
+\end{align*}
+As in the previous proof, we note that $\ora X_t$ has the same law as $\rme^{-\int_0^t \alpha(s) \rmd s} \ora X_0  + \sigma_t Z$, with $Z \sim \mathcal{N}(0, \mathrm{I}_d)$ independent of $\ora X_0$. Therefore, using Jensen's inequality,
+\begin{align*}
+    & \mathbb{E} \left[\left\| \mathbb{E} \left[ \ora X_0 e^{- \int_0^{T-t} \alpha (s) \rmd s} - \ora X_{T-t} \middle| \ora X_{T-t}\right] \mathbb{E} \left[    \ora X_0 e^{- \int_0^{T-t} \alpha (s) \rmd s} - \ora X_{T-t}  \middle| \ora X_{T-t}   \right]^\top \right\|^4_{\mathrm{Fr}} \right] \\
+    & \leq \mathbb{E} \left[\left\| \mathbb{E} \left[ \ora X_0 e^{- \int_0^{T-t} \alpha (s) \rmd s} - \ora X_{T-t} \middle| \ora X_{T-t}\right] \right\|^4_2 \left\| \mathbb{E} \left[    \ora X_0 e^{- \int_0^{T-t} \alpha (s) \rmd s} - \ora X_{T-t}  \middle| \ora X_{T-t}   \right] \right\|^4_{2} \right] \\
+    & \leq \mathbb{E} \left[ \mathbb{E} \left[ \left\|  \ora X_0 e^{- \int_0^{T-t} \alpha (s) \rmd s} - \ora X_{T-t} \right\|^8_2 \middle| \ora X_{T-t}\right] \right]  \\
+    & \leq \sigma_t^8 \mathbb{E} \left[ \left\|   Z \right\|^8_2 \right]
+\end{align*}
+and
+\begin{align*}
+    & \mathbb{E } \left[ \left\| \mathbb{E} \left[ \left(\ora X_0 e^{- \int_0^{T-t} \alpha (s) \rmd s} - \ora X_{T-t} \right) \left(\ora X_0 e^{- \int_0^{T-t} \alpha (s) \rmd s} - \ora X_{T-t} \right)^\top \middle| \ora X_{T-t} \right]  \right\|^4_{\mathrm{Fr}} \right] \\
+    & \leq \mathbb{E } \left[  \mathbb{E} \left[ \left\| \left(\ora X_0 e^{- \int_0^{T-t} \alpha (s) \rmd s} - \ora X_{T-t} \right)
+    \left(\ora X_0 e^{- \int_0^{T-t} \alpha (s) \rmd s} - \ora X_{T-t} \right)^\top  \right\|^4_{\mathrm{Fr}}  \middle| \ora X_{T-t} \right]  \right] \\
+    & =  \mathbb{E} \left[ \left\| \left(\ora X_0 e^{- \int_0^{T-t} \alpha (s) \rmd s} - \ora X_{T-t} \right) \right\|^8_{\rm 2}  \right]   \\
+    & \leq \sigma_t^8 \mathbb{E} \left[ \left\|   Z \right\|^8_2 \right]\eqsp.
+\end{align*}
+Hence, we can conclude that
+\begin{align*}
+    \mathbb{E} \left[ \left\| Z_t \right\|^4_{\mathrm{Fr}} \right] = \mathbb{E} \left[ \left\| \nabla^2 \log \tilde p_{T-t} \left( \ora X_{T-t} \right) \right\|^4_{\mathrm{Fr}} \right] \leq C \left(\sigma^{-8}_{T-t}+ \sigma^{-8}\right) \left( \mathbb{E} \left[ \left\|   Z \right\|^8_2 \right] + d^4 \right)\eqsp.
+\end{align*}
+\end{proof}
+
+
+
+
 
 
 \chapter{Basics in Markov chains}
@@ -2386,7 +2869,7 @@ $A$ belong to $\Xsigma^{\otimes\nset}$, it can be (and it will be)
 useful to get approximations of $A$ by sets in $\mcf_{k}$ where
 $k$ is conveniently chosen.
 \begin{lemma}
-\textbf{\label{lem:approx}(The approximation lemma)} \index{approximation lemma}Any set $A\in\Xsigma^{\otimes\nset}$
+\textbf{\label{lem:approx:ind}(The approximation lemma)} \index{approximation lemma}Any set $A\in\Xsigma^{\otimes\nset}$
 satisfies the following approximation property:
 \begin{itemize}
 \item for all $\delta>0$, there exist $k\in\nset$ and $B\in\mcf_{k}$
